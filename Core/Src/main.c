@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "app_test_gpio.h"
+#include "app_test_uart.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -98,7 +99,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   	{
-  	    APP_Test_GPIO();
+	  APP_Test_Run();
   	}
   /* USER CODE END 3 */
 }
