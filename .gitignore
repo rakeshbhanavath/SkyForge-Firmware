@@ -1,0 +1,30 @@
+# Build output
+Debug/
+Release/
+
+# CubeIDE metadata
+.settings/
+.metadata/
+
+# Eclipse
+*.launch
+
+# Generated dependency files
+*.d
+
+# Object files
+*.o
+
+# ELF, HEX, BIN
+*.elf
+*.hex
+*.bin
+*.map
+
+# Stack usage / complexity reports
+*.su
+*.cyclo
+
+# OS files
+Thumbs.db
+.DS_Store
