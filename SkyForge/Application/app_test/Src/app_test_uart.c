@@ -220,10 +220,10 @@ void APP_Test_UART(void)
  *
  *===========================================================================*/
 
-//    BSP_UART_TransmitString(&huart2,
-//                            "BSP UART Working\r\n");
+    BSP_UART_TransmitString(&huart2,
+                            "BSP UART Working\r\n");
 //
-//    HAL_Delay(1000);
+    HAL_Delay(1000);
 
 
 
