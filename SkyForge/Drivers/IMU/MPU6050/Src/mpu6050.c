@@ -301,6 +301,140 @@ HAL_StatusTypeDef MPU6050_ReadTemperature(I2C_HandleTypeDef *hi2c,
 }
 
 
+HAL_StatusTypeDef MPU6050_SetSampleRateDivider(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t divider)
+{
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_SMPLRT_DIV,
+                divider);
+}
+
+HAL_StatusTypeDef MPU6050_GetSampleRateDivider(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t *divider)
+{
+    return MPU6050_ReadRegister(
+                hi2c,
+                MPU6050_REG_SMPLRT_DIV,
+                divider);
+}
+
+HAL_StatusTypeDef MPU6050_SetDLPF(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_DLPF_t dlpf)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    /* Read current CONFIG register */
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_CONFIG,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    /* Clear DLPF bits */
+    regValue &= ~MPU6050_DLPF_CFG_Msk;
+
+    /* Set new DLPF configuration */
+    regValue |= ((uint8_t)dlpf << MPU6050_DLPF_CFG_Pos);
+
+    /* Write updated register */
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_CONFIG,
+                regValue);
+}
+
+
+HAL_StatusTypeDef MPU6050_GetDLPF(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_DLPF_t *dlpf)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    /* Read CONFIG register */
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_CONFIG,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    /* Extract DLPF bits */
+    *dlpf = (MPU6050_DLPF_t)
+            ((regValue & MPU6050_DLPF_CFG_Msk)
+             >> MPU6050_DLPF_CFG_Pos);
+
+    return HAL_OK;
+}
+
+HAL_StatusTypeDef MPU6050_SetClockSource(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_ClockSource_t source)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    /* Read current PWR_MGMT_1 register */
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_PWR_MGMT_1,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    /* Clear CLKSEL bits [2:0] */
+    regValue &= ~MPU6050_CLKSEL_Msk;
+
+    /* Set new clock source */
+    regValue |= ((uint8_t)source << MPU6050_CLKSEL_Pos);
+
+    /* Write updated register */
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_PWR_MGMT_1,
+                regValue);
+}
+
+HAL_StatusTypeDef MPU6050_GetClockSource(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_ClockSource_t *source)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    /* Read PWR_MGMT_1 register */
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_PWR_MGMT_1,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    /* Extract CLKSEL bits [2:0] */
+    *source = (MPU6050_ClockSource_t)
+              ((regValue & MPU6050_CLKSEL_Msk) >>
+               MPU6050_CLKSEL_Pos);
+
+    return HAL_OK;
+}
 /*=========================================================
  * Reset Device
  *========================================================*/

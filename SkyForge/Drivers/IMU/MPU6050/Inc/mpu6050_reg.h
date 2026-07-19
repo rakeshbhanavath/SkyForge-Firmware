@@ -24,11 +24,21 @@
 #define MPU6050_REG_SELF_TEST_Z       0x0F
 #define MPU6050_REG_SELF_TEST_A       0x10
 
-#define MPU6050_REG_SMPLRT_DIV        0x19
-#define MPU6050_REG_CONFIG            0x1A
-//#define MPU6050_REG_GYRO_CONFIG       0x1B
+#define MPU6050_REG_CONFIG            0x1AU
+
 #define MPU6050_REG_GYRO_CONFIG       0x1BU
-#define MPU6050_REG_ACCEL_CONFIG      0x1C
+#define MPU6050_REG_ACCEL_CONFIG      0x1CU
+
+
+
+#define MPU6050_REG_SMPLRT_DIV    0x19U
+
+
+#define MPU6050_DLPF_CFG_Pos    0U
+#define MPU6050_DLPF_CFG_Msk    (0x07U << MPU6050_DLPF_CFG_Pos)
+
+#define MPU6050_CLKSEL_Pos      0U
+#define MPU6050_CLKSEL_Msk      (0x07U << MPU6050_CLKSEL_Pos)
 
 /*=========================================================
  * Accelerometer Configuration Register (0x1C)
@@ -76,13 +86,6 @@
 
 #define MPU6050_REG_PWR_MGMT_1        0x6B
 #define MPU6050_REG_PWR_MGMT_2        0x6C
-
-/*=========================================================
- * PWR_MGMT_1 Register Bits
- *========================================================*/
-
-#define MPU6050_DEVICE_RESET          (1U << 7)
-#define MPU6050_SLEEP                 (1U << 6)
 
 #define MPU6050_REG_WHO_AM_I          0x75
 
