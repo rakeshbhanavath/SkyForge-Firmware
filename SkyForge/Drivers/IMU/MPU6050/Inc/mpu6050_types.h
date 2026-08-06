@@ -23,6 +23,15 @@ typedef struct
     float temperature;
 } MPU6050_Temp_t;
 
+
+typedef struct
+{
+    MPU6050_Accel_t accel;
+    MPU6050_Temp_t  temp;
+    MPU6050_Gyro_t  gyro;
+} MPU6050_FIFOPacket_t;
+
+
 typedef enum
 {
     MPU6050_ACCEL_RANGE_2G = 0,

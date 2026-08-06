@@ -756,6 +756,509 @@ HAL_StatusTypeDef MPU6050_IsAccelFIFOEnabled(
 }
 
 
+
+/*=========================================================
+ * Enable X Gyroscope FIFO
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_EnableGyroXFIFO(
+    I2C_HandleTypeDef *hi2c)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_EN,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    regValue |= MPU6050_FIFO_XG_Msk;
+
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_FIFO_EN,
+                regValue);
+}
+
+
+/*=========================================================
+ * Disable X Gyroscope FIFO
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_DisableGyroXFIFO(
+    I2C_HandleTypeDef *hi2c)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_EN,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    regValue &= ~MPU6050_FIFO_XG_Msk;
+
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_FIFO_EN,
+                regValue);
+}
+
+
+/*=========================================================
+ * Check X Gyroscope FIFO Status
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_IsGyroXFIFOEnabled(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t *enabled)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_EN,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    *enabled =
+        (regValue & MPU6050_FIFO_XG_Msk) ? 1U : 0U;
+
+    return HAL_OK;
+}
+
+
+
+
+
+
+
+/*=========================================================
+ * Enable Y Gyroscope FIFO
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_EnableGyroYFIFO(
+    I2C_HandleTypeDef *hi2c)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_EN,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    regValue |= MPU6050_FIFO_YG_Msk;
+
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_FIFO_EN,
+                regValue);
+}
+
+
+/*=========================================================
+ * Disable Y Gyroscope FIFO
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_DisableGyroYFIFO(
+    I2C_HandleTypeDef *hi2c)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_EN,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    regValue &= ~MPU6050_FIFO_YG_Msk;
+
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_FIFO_EN,
+                regValue);
+}
+
+
+/*=========================================================
+ * Check Y Gyroscope FIFO Status
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_IsGyroYFIFOEnabled(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t *enabled)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_EN,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    *enabled =
+        (regValue & MPU6050_FIFO_YG_Msk) ? 1U : 0U;
+
+    return HAL_OK;
+}
+
+
+
+
+
+
+
+/*=========================================================
+ * Enable Z Gyroscope FIFO
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_EnableGyroZFIFO(
+    I2C_HandleTypeDef *hi2c)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_EN,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    regValue |= MPU6050_FIFO_ZG_Msk;
+
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_FIFO_EN,
+                regValue);
+}
+
+
+/*=========================================================
+ * Disable Z Gyroscope FIFO
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_DisableGyroZFIFO(
+    I2C_HandleTypeDef *hi2c)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_EN,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    regValue &= ~MPU6050_FIFO_ZG_Msk;
+
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_FIFO_EN,
+                regValue);
+}
+
+
+/*=========================================================
+ * Check Z Gyroscope FIFO Status
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_IsGyroZFIFOEnabled(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t *enabled)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_EN,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    *enabled =
+        (regValue & MPU6050_FIFO_ZG_Msk) ? 1U : 0U;
+
+    return HAL_OK;
+}
+
+
+
+
+/*=========================================================
+ * Enable Temperature FIFO
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_EnableTempFIFO(
+    I2C_HandleTypeDef *hi2c)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_EN,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    regValue |= MPU6050_FIFO_TEMP_Msk;
+
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_FIFO_EN,
+                regValue);
+}
+
+
+
+/*=========================================================
+ * Disable Temperature FIFO
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_DisableTempFIFO(
+    I2C_HandleTypeDef *hi2c)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_EN,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    regValue &= ~MPU6050_FIFO_TEMP_Msk;
+
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_FIFO_EN,
+                regValue);
+}
+
+
+/*=========================================================
+ * Check Temperature FIFO Status
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_IsTempFIFOEnabled(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t *enabled)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_EN,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    *enabled =
+        (regValue & MPU6050_FIFO_TEMP_Msk) ? 1U : 0U;
+
+    return HAL_OK;
+}
+
+
+
+/*=========================================================
+ * Read FIFO Count
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_GetFIFOCount(
+    I2C_HandleTypeDef *hi2c,
+    uint16_t *count)
+{
+    HAL_StatusTypeDef status;
+
+    uint8_t fifoCountHigh;
+    uint8_t fifoCountLow;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_COUNTH,
+                    &fifoCountHigh);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_COUNTL,
+                    &fifoCountLow);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    *count =
+        ((uint16_t)fifoCountHigh << 8) |
+         (uint16_t)fifoCountLow;
+
+    return HAL_OK;
+}
+
+
+
+/*=========================================================
+ * Read FIFO Byte
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_ReadFIFO(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t *data)
+{
+    return MPU6050_ReadRegister(
+                hi2c,
+                MPU6050_REG_FIFO_R_W,
+                data);
+}
+
+
+/*=========================================================
+ * Read FIFO Buffer
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_ReadFIFOBuffer(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t *buffer,
+    uint16_t length)
+{
+    return HAL_I2C_Mem_Read(
+                hi2c,
+                MPU6050_I2C_ADDR_LOW,
+                MPU6050_REG_FIFO_R_W,
+                I2C_MEMADD_SIZE_8BIT,
+                buffer,
+                length,
+                HAL_MAX_DELAY);
+}
+
+
+
+
+
+/*=========================================================
+ * Read FIFO Packet
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_ReadFIFOPacket(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_FIFOPacket_t *packet)
+{
+    HAL_StatusTypeDef status;
+
+    uint8_t buffer[14];
+
+    status = MPU6050_ReadFIFOBuffer(
+                    hi2c,
+                    buffer,
+                    sizeof(buffer));
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    /*---------------------------------------------------------
+     * Accelerometer
+     *--------------------------------------------------------*/
+
+    packet->accel.x =
+        (int16_t)((buffer[0] << 8) | buffer[1]);
+
+    packet->accel.y =
+        (int16_t)((buffer[2] << 8) | buffer[3]);
+
+    packet->accel.z =
+        (int16_t)((buffer[4] << 8) | buffer[5]);
+
+    /*---------------------------------------------------------
+     * Temperature
+     *--------------------------------------------------------*/
+
+    packet->temp.raw =
+        (int16_t)((buffer[6] << 8) | buffer[7]);
+
+    packet->temp.temperature =
+        (packet->temp.raw / 340.0f) + 36.53f;
+
+    /*---------------------------------------------------------
+     * Gyroscope
+     *--------------------------------------------------------*/
+
+    packet->gyro.x =
+        (int16_t)((buffer[8] << 8) | buffer[9]);
+
+    packet->gyro.y =
+        (int16_t)((buffer[10] << 8) | buffer[11]);
+
+    packet->gyro.z =
+        (int16_t)((buffer[12] << 8) | buffer[13]);
+
+    return HAL_OK;
+}
+
+
+
+
 /*=========================================================
  * Reset Device
  *========================================================*/

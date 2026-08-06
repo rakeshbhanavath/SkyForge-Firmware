@@ -149,6 +149,49 @@ HAL_StatusTypeDef MPU6050_ResetFIFO(I2C_HandleTypeDef *hi2c);
 HAL_StatusTypeDef MPU6050_GetFIFOEnable(I2C_HandleTypeDef *hi2c,
                                         uint8_t *enable);
 
+
+
+/*=========================================================
+ * FIFO Data Functions
+ *========================================================*/
+
+/**
+ * @brief Read the number of bytes currently stored in FIFO.
+ */
+HAL_StatusTypeDef MPU6050_GetFIFOCount(
+    I2C_HandleTypeDef *hi2c,
+    uint16_t *count);
+
+
+/**
+ * @brief Read one byte from FIFO.
+ */
+HAL_StatusTypeDef MPU6050_ReadFIFO(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t *data);
+
+/**
+ * @brief Read multiple bytes from FIFO.
+ *
+ * @param hi2c   Pointer to I2C handle.
+ * @param buffer Destination buffer.
+ * @param length Number of bytes to read.
+ *
+ * @return HAL status.
+ */
+HAL_StatusTypeDef MPU6050_ReadFIFOBuffer(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t *buffer,
+    uint16_t length);
+
+
+/**
+ * @brief Read one complete sensor packet from FIFO.
+ */
+HAL_StatusTypeDef MPU6050_ReadFIFOPacket(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_FIFOPacket_t *packet);
+
 /*---------------------------------------------------------
  * Accelerometer FIFO Configuration
  *--------------------------------------------------------*/
@@ -168,6 +211,86 @@ HAL_StatusTypeDef MPU6050_DisableAccelFIFO(I2C_HandleTypeDef *hi2c);
  */
 HAL_StatusTypeDef MPU6050_IsAccelFIFOEnabled(I2C_HandleTypeDef *hi2c,
                                              uint8_t *enabled);
+
+
+/*---------------------------------------------------------
+ * Gyroscope FIFO Configuration
+ *--------------------------------------------------------*/
+
+/**
+ * @brief Enable X Gyroscope FIFO.
+ */
+HAL_StatusTypeDef MPU6050_EnableGyroXFIFO(I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Disable X Gyroscope FIFO.
+ */
+HAL_StatusTypeDef MPU6050_DisableGyroXFIFO(I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Check X Gyroscope FIFO status.
+ */
+HAL_StatusTypeDef MPU6050_IsGyroXFIFOEnabled(I2C_HandleTypeDef *hi2c,
+                                             uint8_t *enabled);
+
+/**
+ * @brief Enable Y Gyroscope FIFO.
+ */
+HAL_StatusTypeDef MPU6050_EnableGyroYFIFO(I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Disable Y Gyroscope FIFO.
+ */
+HAL_StatusTypeDef MPU6050_DisableGyroYFIFO(I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Check Y Gyroscope FIFO status.
+ */
+HAL_StatusTypeDef MPU6050_IsGyroYFIFOEnabled(I2C_HandleTypeDef *hi2c,
+                                             uint8_t *enabled);
+
+/**
+ * @brief Enable Z Gyroscope FIFO.
+ */
+HAL_StatusTypeDef MPU6050_EnableGyroZFIFO(I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Disable Z Gyroscope FIFO.
+ */
+HAL_StatusTypeDef MPU6050_DisableGyroZFIFO(I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Check Z Gyroscope FIFO status.
+ */
+HAL_StatusTypeDef MPU6050_IsGyroZFIFOEnabled(I2C_HandleTypeDef *hi2c,
+                                             uint8_t *enabled);
+
+
+
+/*---------------------------------------------------------
+ * Temperature FIFO Configuration
+ *--------------------------------------------------------*/
+
+/**
+ * @brief Enable Temperature FIFO.
+ */
+HAL_StatusTypeDef MPU6050_EnableTempFIFO(
+    I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Disable Temperature FIFO.
+ */
+HAL_StatusTypeDef MPU6050_DisableTempFIFO(
+    I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Check Temperature FIFO status.
+ */
+HAL_StatusTypeDef MPU6050_IsTempFIFOEnabled(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t *enabled);
+
+
 
 /*=========================================================
  * Sensor Data Functions
