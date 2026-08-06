@@ -1,53 +1,93 @@
 #ifndef MPU6050_H
 #define MPU6050_H
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+/*=========================================================
+ * Includes
+ *========================================================*/
+
 #include "main.h"
 #include <stdint.h>
 
 #include "mpu6050_defs.h"
 #include "mpu6050_types.h"
-//#include "mpu6050_reg.h"
 #include "mpu6050_utils.h"
 
 /*=========================================================
- * Initialization Functions
+ * Device Control Functions
  *========================================================*/
 
+/**
+ * @brief Initialize MPU6050.
+ */
 HAL_StatusTypeDef MPU6050_Init(I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Perform software reset.
+ */
 HAL_StatusTypeDef MPU6050_Reset(I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Wake the sensor.
+ */
 HAL_StatusTypeDef MPU6050_WakeUp(I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Put the sensor into sleep mode.
+ */
 HAL_StatusTypeDef MPU6050_Sleep(I2C_HandleTypeDef *hi2c);
 
 /*=========================================================
  * Register Access Functions
  *========================================================*/
 
+/**
+ * @brief Read one register.
+ */
 HAL_StatusTypeDef MPU6050_ReadRegister(I2C_HandleTypeDef *hi2c,
                                        uint8_t reg,
                                        uint8_t *data);
 
+/**
+ * @brief Write one register.
+ */
 HAL_StatusTypeDef MPU6050_WriteRegister(I2C_HandleTypeDef *hi2c,
                                         uint8_t reg,
                                         uint8_t data);
 
+/**
+ * @brief Read WHO_AM_I register.
+ */
 HAL_StatusTypeDef MPU6050_ReadWHOAMI(I2C_HandleTypeDef *hi2c,
                                      uint8_t *id);
 
 /*=========================================================
- * Configuration Functions
+ * Accelerometer Configuration
  *========================================================*/
+
+HAL_StatusTypeDef MPU6050_SetAccelRange(I2C_HandleTypeDef *hi2c,
+                                        MPU6050_AccelRange_t range);
 
 HAL_StatusTypeDef MPU6050_GetAccelRange(I2C_HandleTypeDef *hi2c,
                                         MPU6050_AccelRange_t *range);
 
-HAL_StatusTypeDef MPU6050_SetAccelRange(I2C_HandleTypeDef *hi2c,
-                                        MPU6050_AccelRange_t range);
+/*=========================================================
+ * Gyroscope Configuration
+ *========================================================*/
 
 HAL_StatusTypeDef MPU6050_SetGyroRange(I2C_HandleTypeDef *hi2c,
                                        MPU6050_GyroRange_t range);
 
 HAL_StatusTypeDef MPU6050_GetGyroRange(I2C_HandleTypeDef *hi2c,
                                        MPU6050_GyroRange_t *range);
+
+/*=========================================================
+ * Sampling Configuration
+ *========================================================*/
 
 HAL_StatusTypeDef MPU6050_SetSampleRateDivider(I2C_HandleTypeDef *hi2c,
                                                uint8_t divider);
@@ -61,16 +101,76 @@ HAL_StatusTypeDef MPU6050_SetDLPF(I2C_HandleTypeDef *hi2c,
 HAL_StatusTypeDef MPU6050_GetDLPF(I2C_HandleTypeDef *hi2c,
                                   MPU6050_DLPF_t *dlpf);
 
-HAL_StatusTypeDef MPU6050_SetClockSource(
-    I2C_HandleTypeDef *hi2c,
-    MPU6050_ClockSource_t source);
+HAL_StatusTypeDef MPU6050_SetClockSource(I2C_HandleTypeDef *hi2c,
+                                         MPU6050_ClockSource_t source);
 
-HAL_StatusTypeDef MPU6050_GetClockSource(
-    I2C_HandleTypeDef *hi2c,
-    MPU6050_ClockSource_t *source);
+HAL_StatusTypeDef MPU6050_GetClockSource(I2C_HandleTypeDef *hi2c,
+                                         MPU6050_ClockSource_t *source);
 
 /*=========================================================
- * Sensor Read Functions
+ * Interrupt Configuration
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_EnableDataReadyInterrupt(I2C_HandleTypeDef *hi2c);
+
+HAL_StatusTypeDef MPU6050_DisableDataReadyInterrupt(I2C_HandleTypeDef *hi2c);
+
+HAL_StatusTypeDef MPU6050_GetInterruptStatus(I2C_HandleTypeDef *hi2c,
+                                             uint8_t *status);
+
+HAL_StatusTypeDef MPU6050_GetInterruptEnable(I2C_HandleTypeDef *hi2c,
+                                             uint8_t *enable);
+
+HAL_StatusTypeDef MPU6050_IsDataReadyInterruptEnabled(I2C_HandleTypeDef *hi2c,
+                                                      uint8_t *enabled);
+
+/*=========================================================
+ * FIFO Configuration
+ *========================================================*/
+
+/**
+ * @brief Enable FIFO hardware.
+ */
+HAL_StatusTypeDef MPU6050_EnableFIFO(I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Disable FIFO hardware.
+ */
+HAL_StatusTypeDef MPU6050_DisableFIFO(I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Reset FIFO buffer.
+ */
+HAL_StatusTypeDef MPU6050_ResetFIFO(I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Get FIFO hardware enable status.
+ */
+HAL_StatusTypeDef MPU6050_GetFIFOEnable(I2C_HandleTypeDef *hi2c,
+                                        uint8_t *enable);
+
+/*---------------------------------------------------------
+ * Accelerometer FIFO Configuration
+ *--------------------------------------------------------*/
+
+/**
+ * @brief Enable Accelerometer data to be stored in FIFO.
+ */
+HAL_StatusTypeDef MPU6050_EnableAccelFIFO(I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Disable Accelerometer data from FIFO.
+ */
+HAL_StatusTypeDef MPU6050_DisableAccelFIFO(I2C_HandleTypeDef *hi2c);
+
+/**
+ * @brief Check whether Accelerometer FIFO is enabled.
+ */
+HAL_StatusTypeDef MPU6050_IsAccelFIFOEnabled(I2C_HandleTypeDef *hi2c,
+                                             uint8_t *enabled);
+
+/*=========================================================
+ * Sensor Data Functions
  *========================================================*/
 
 HAL_StatusTypeDef MPU6050_ReadAccel(I2C_HandleTypeDef *hi2c,
@@ -82,4 +182,8 @@ HAL_StatusTypeDef MPU6050_ReadGyro(I2C_HandleTypeDef *hi2c,
 HAL_StatusTypeDef MPU6050_ReadTemperature(I2C_HandleTypeDef *hi2c,
                                           MPU6050_Temp_t *temp);
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* MPU6050_H */

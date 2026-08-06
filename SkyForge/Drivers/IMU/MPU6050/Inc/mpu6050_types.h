@@ -51,6 +51,9 @@ typedef enum
 } MPU6050_DLPF_t;
 
 
+
+
+
 typedef enum
 {
     MPU6050_CLOCK_INTERNAL = 0,

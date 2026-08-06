@@ -605,7 +605,7 @@ void APP_Test_MPU6050(void)
                  *
                  *===========================================================================*/
 
-                #if 1
+                #if 0
 
                     MPU6050_ClockSource_t clockSource;
                     char message[128];
@@ -687,5 +687,374 @@ void APP_Test_MPU6050(void)
                     }
 
                 #endif
+
+
+                    /*==============================================================================
+                     * TEST 6 : Data Ready Interrupt Configuration
+                     *==============================================================================
+                     *
+                     * Objective
+                     * ---------
+                     * Enable the DATA_RDY interrupt, verify that it is enabled,
+                     * then disable it and verify that it is disabled.
+                     *
+                     *===========================================================================*/
+
+                    #if 0
+
+                        uint8_t status;
+                        char message[128];
+
+                        BSP_UART_TransmitString(&huart2,
+                                                "\r\nInitializing MPU6050...\r\n");
+
+                        if (MPU6050_Init(&hi2c1) != HAL_OK)
+                        {
+                            BSP_UART_TransmitString(&huart2,
+                                                    "MPU6050 Initialization Failed\r\n");
+
+                            while (1);
+                        }
+
+                        BSP_UART_TransmitString(&huart2,
+                                                "MPU6050 Initialization Successful\r\n");
+
+                        while (1)
+                        {
+                            /*-----------------------------------------------------
+                             * Enable Interrupt
+                             *----------------------------------------------------*/
+
+                            BSP_UART_TransmitString(&huart2,
+                                                    "\r\nEnabling DATA_RDY Interrupt...\r\n");
+
+                            if (MPU6050_EnableDataReadyInterrupt(&hi2c1) != HAL_OK)
+                            {
+                                BSP_UART_TransmitString(&huart2,
+                                                        "Enable Failed\r\n");
+
+                                continue;
+                            }
+
+                            if (MPU6050_GetInterruptEnable(&hi2c1,
+                                                           &status) != HAL_OK)
+                            {
+                                BSP_UART_TransmitString(&huart2,
+                                                        "Read Failed\r\n");
+
+                                continue;
+                            }
+
+                            sprintf(message,
+                                    "INT_ENABLE = 0x%02X\r\n",
+                                    status);
+
+                            BSP_UART_TransmitString(&huart2,
+                                                    message);
+
+                            uint8_t enabled;
+
+                            if (MPU6050_IsDataReadyInterruptEnabled(&hi2c1,
+                                                                    &enabled) != HAL_OK)
+                            {
+                                BSP_UART_TransmitString(&huart2,
+                                                        "Read Failed\r\n");
+
+                                continue;
+                            }
+
+                            if (enabled)
+
+                            HAL_Delay(2000);
+
+                            /*-----------------------------------------------------
+                             * Disable Interrupt
+                             *----------------------------------------------------*/
+
+                            BSP_UART_TransmitString(&huart2,
+                                                    "\r\nDisabling DATA_RDY Interrupt...\r\n");
+
+                            if (MPU6050_DisableDataReadyInterrupt(&hi2c1) != HAL_OK)
+                            {
+                                BSP_UART_TransmitString(&huart2,
+                                                        "Disable Failed\r\n");
+
+                                continue;
+                            }
+
+                            if (MPU6050_GetInterruptEnable(&hi2c1,
+                                                           &status) != HAL_OK)
+                            {
+                                BSP_UART_TransmitString(&huart2,
+                                                        "Read Failed\r\n");
+
+                                continue;
+                            }
+
+                            sprintf(message,
+                                    "INT_ENABLE = 0x%02X\r\n",
+                                    status);
+
+                            BSP_UART_TransmitString(&huart2,
+                                                    message);
+
+                            if (MPU6050_IsDataReadyInterruptEnabled(&hi2c1,
+                                                                    &enabled) != HAL_OK)
+                            {
+                                BSP_UART_TransmitString(&huart2,
+                                                        "Read Failed\r\n");
+
+                                continue;
+                            }
+
+                            if (!enabled)
+                            HAL_Delay(2000);
+                        }
+
+                    #endif
+
+
+
+                        /*==============================================================================
+                         * TEST 7 : FIFO Enable / Disable
+                         *==============================================================================
+                         *
+                         * Objective
+                         * ---------
+                         * Enable the FIFO, verify it is enabled,
+                         * disable the FIFO, and verify it is disabled.
+                         *
+                         *===========================================================================*/
+
+                        #if 0
+
+                            uint8_t enabled;
+
+                            BSP_UART_TransmitString(&huart2,
+                                                    "\r\nInitializing MPU6050...\r\n");
+
+                            if (MPU6050_Init(&hi2c1) != HAL_OK)
+                            {
+                                BSP_UART_TransmitString(&huart2,
+                                                        "MPU6050 Initialization Failed\r\n");
+
+                                while (1);
+                            }
+
+                            BSP_UART_TransmitString(&huart2,
+                                                    "MPU6050 Initialization Successful\r\n");
+
+                            while (1)
+                            {
+                                /*---------------------------------------------------------
+                                 * Reset FIFO
+                                 *--------------------------------------------------------*/
+
+                                BSP_UART_TransmitString(&huart2,
+                                                        "\r\nResetting FIFO...\r\n");
+
+                                if (MPU6050_ResetFIFO(&hi2c1) != HAL_OK)
+                                {
+                                    BSP_UART_TransmitString(&huart2,
+                                                            "FIFO Reset Failed\r\n");
+
+                                    continue;
+                                }
+
+                                BSP_UART_TransmitString(&huart2,
+                                                        "FIFO Reset Successful\r\n");
+
+                                HAL_Delay(500);
+
+                                /*---------------------------------------------------------
+                                 * Enable FIFO
+                                 *--------------------------------------------------------*/
+
+                                BSP_UART_TransmitString(&huart2,
+                                                        "Enabling FIFO...\r\n");
+
+                                if (MPU6050_EnableFIFO(&hi2c1) != HAL_OK)
+                                {
+                                    BSP_UART_TransmitString(&huart2,
+                                                            "FIFO Enable Failed\r\n");
+
+                                    continue;
+                                }
+
+                                if (MPU6050_GetFIFOEnable(&hi2c1,
+                                                          &enabled) != HAL_OK)
+                                {
+                                    BSP_UART_TransmitString(&huart2,
+                                                            "Verification Failed\r\n");
+
+                                    continue;
+                                }
+
+                                if (enabled)
+                                {
+                                    BSP_UART_TransmitString(&huart2,
+                                                            "FIFO Enabled : PASSED\r\n");
+                                }
+                                else
+                                {
+                                    BSP_UART_TransmitString(&huart2,
+                                                            "FIFO Enabled : FAILED\r\n");
+                                }
+
+                                HAL_Delay(2000);
+
+                                /*---------------------------------------------------------
+                                 * Disable FIFO
+                                 *--------------------------------------------------------*/
+
+                                BSP_UART_TransmitString(&huart2,
+                                                        "\r\nDisabling FIFO...\r\n");
+
+                                if (MPU6050_DisableFIFO(&hi2c1) != HAL_OK)
+                                {
+                                    BSP_UART_TransmitString(&huart2,
+                                                            "FIFO Disable Failed\r\n");
+
+                                    continue;
+                                }
+
+                                if (MPU6050_GetFIFOEnable(&hi2c1,
+                                                          &enabled) != HAL_OK)
+                                {
+                                    BSP_UART_TransmitString(&huart2,
+                                                            "Verification Failed\r\n");
+
+                                    continue;
+                                }
+
+                                if (!enabled)
+                                {
+                                    BSP_UART_TransmitString(&huart2,
+                                                            "FIFO Disabled : PASSED\r\n");
+                                }
+                                else
+                                {
+                                    BSP_UART_TransmitString(&huart2,
+                                                            "FIFO Disabled : FAILED\r\n");
+                                }
+
+                                HAL_Delay(2000);
+                            }
+
+                        #endif
+
+
+                            /*==============================================================================
+                             * TEST 7.2 : Accelerometer FIFO Configuration
+                             *==============================================================================
+                             *
+                             * Objective
+                             * ---------
+                             * Enable Accelerometer FIFO,
+                             * verify it,
+                             * disable it,
+                             * verify it.
+                             *
+                             *===========================================================================*/
+
+                            #if 1
+
+                                uint8_t enabled;
+
+                                BSP_UART_TransmitString(&huart2,
+                                                        "\r\nInitializing MPU6050...\r\n");
+
+                                if (MPU6050_Init(&hi2c1) != HAL_OK)
+                                {
+                                    BSP_UART_TransmitString(&huart2,
+                                                            "MPU6050 Initialization Failed\r\n");
+
+                                    while (1);
+                                }
+
+                                BSP_UART_TransmitString(&huart2,
+                                                        "MPU6050 Initialization Successful\r\n");
+
+                                while (1)
+                                {
+                                    /*---------------------------------------------------------
+                                     * Enable Accelerometer FIFO
+                                     *--------------------------------------------------------*/
+
+                                    BSP_UART_TransmitString(&huart2,
+                                                            "\r\nEnabling Accelerometer FIFO...\r\n");
+
+                                    if (MPU6050_EnableAccelFIFO(&hi2c1) != HAL_OK)
+                                    {
+                                        BSP_UART_TransmitString(&huart2,
+                                                                "Enable Failed\r\n");
+
+                                        continue;
+                                    }
+
+                                    if (MPU6050_IsAccelFIFOEnabled(&hi2c1,
+                                                                   &enabled) != HAL_OK)
+                                    {
+                                        BSP_UART_TransmitString(&huart2,
+                                                                "Verification Failed\r\n");
+
+                                        continue;
+                                    }
+
+                                    if (enabled)
+                                    {
+                                        BSP_UART_TransmitString(&huart2,
+                                                                "Accelerometer FIFO : PASSED\r\n");
+                                    }
+                                    else
+                                    {
+                                        BSP_UART_TransmitString(&huart2,
+                                                                "Accelerometer FIFO : FAILED\r\n");
+                                    }
+
+                                    HAL_Delay(2000);
+
+                                    /*---------------------------------------------------------
+                                     * Disable Accelerometer FIFO
+                                     *--------------------------------------------------------*/
+
+                                    BSP_UART_TransmitString(&huart2,
+                                                            "\r\nDisabling Accelerometer FIFO...\r\n");
+
+                                    if (MPU6050_DisableAccelFIFO(&hi2c1) != HAL_OK)
+                                    {
+                                        BSP_UART_TransmitString(&huart2,
+                                                                "Disable Failed\r\n");
+
+                                        continue;
+                                    }
+
+                                    if (MPU6050_IsAccelFIFOEnabled(&hi2c1,
+                                                                   &enabled) != HAL_OK)
+                                    {
+                                        BSP_UART_TransmitString(&huart2,
+                                                                "Verification Failed\r\n");
+
+                                        continue;
+                                    }
+
+                                    if (!enabled)
+                                    {
+                                        BSP_UART_TransmitString(&huart2,
+                                                                "Accelerometer FIFO : PASSED\r\n");
+                                    }
+                                    else
+                                    {
+                                        BSP_UART_TransmitString(&huart2,
+                                                                "Accelerometer FIFO : FAILED\r\n");
+                                    }
+
+                                    HAL_Delay(2000);
+                                }
+
+                            #endif
+
+
+
 
 }

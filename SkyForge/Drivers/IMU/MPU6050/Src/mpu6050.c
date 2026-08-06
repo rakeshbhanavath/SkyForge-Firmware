@@ -435,6 +435,327 @@ HAL_StatusTypeDef MPU6050_GetClockSource(
 
     return HAL_OK;
 }
+
+
+/*=========================================================
+ * Enable Data Ready Interrupt
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_EnableDataReadyInterrupt(
+    I2C_HandleTypeDef *hi2c)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    /* Read current INT_ENABLE register */
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_INT_ENABLE,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    /* Enable DATA_RDY interrupt */
+    regValue |= MPU6050_DATA_RDY_INT_Msk;
+
+    /* Write updated register */
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_INT_ENABLE,
+                regValue);
+}
+
+/*=========================================================
+ * Disable Data Ready Interrupt
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_DisableDataReadyInterrupt(
+    I2C_HandleTypeDef *hi2c)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    /* Read current INT_ENABLE register */
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_INT_ENABLE,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    /* Disable DATA_RDY interrupt */
+    regValue &= ~MPU6050_DATA_RDY_INT_Msk;
+
+    /* Write updated register */
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_INT_ENABLE,
+                regValue);
+}
+
+
+/*=========================================================
+ * Read Interrupt Status
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_GetInterruptStatus(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t *status)
+{
+    return MPU6050_ReadRegister(
+                hi2c,
+                MPU6050_REG_INT_STATUS,
+                status);
+}
+
+HAL_StatusTypeDef MPU6050_GetInterruptEnable(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t *enable)
+{
+    return MPU6050_ReadRegister(
+                hi2c,
+                MPU6050_REG_INT_ENABLE,
+                enable);
+}
+
+/*=========================================================
+ * Check DATA_RDY Interrupt Enable Status
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_IsDataReadyInterruptEnabled(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t *enabled)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_INT_ENABLE,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    *enabled =
+        (regValue & MPU6050_DATA_RDY_INT_Msk) ? 1U : 0U;
+
+    return HAL_OK;
+}
+
+
+/*=========================================================
+ * Enable FIFO
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_EnableFIFO(
+    I2C_HandleTypeDef *hi2c)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_USER_CTRL,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    regValue |= MPU6050_FIFO_EN_Msk;
+
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_USER_CTRL,
+                regValue);
+}
+
+
+/*=========================================================
+ * Disable FIFO
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_DisableFIFO(
+    I2C_HandleTypeDef *hi2c)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_USER_CTRL,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    regValue &= ~MPU6050_FIFO_EN_Msk;
+
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_USER_CTRL,
+                regValue);
+}
+
+
+/*=========================================================
+ * Reset FIFO
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_ResetFIFO(
+    I2C_HandleTypeDef *hi2c)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_USER_CTRL,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    regValue |= MPU6050_FIFO_RESET_Msk;
+
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_USER_CTRL,
+                regValue);
+}
+
+
+
+/*=========================================================
+ * Get FIFO Enable Status
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_GetFIFOEnable(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t *enable)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_USER_CTRL,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    *enable =
+        (regValue & MPU6050_FIFO_EN_Msk) ? 1U : 0U;
+
+    return HAL_OK;
+}
+
+
+
+/*=========================================================
+ * Enable Accelerometer FIFO
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_EnableAccelFIFO(
+    I2C_HandleTypeDef *hi2c)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_EN,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    regValue |= MPU6050_FIFO_ACCEL_Msk;
+
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_FIFO_EN,
+                regValue);
+}
+
+
+/*=========================================================
+ * Disable Accelerometer FIFO
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_DisableAccelFIFO(
+    I2C_HandleTypeDef *hi2c)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_EN,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    regValue &= ~MPU6050_FIFO_ACCEL_Msk;
+
+    return MPU6050_WriteRegister(
+                hi2c,
+                MPU6050_REG_FIFO_EN,
+                regValue);
+}
+
+
+
+/*=========================================================
+ * Check Accelerometer FIFO Status
+ *========================================================*/
+
+HAL_StatusTypeDef MPU6050_IsAccelFIFOEnabled(
+    I2C_HandleTypeDef *hi2c,
+    uint8_t *enabled)
+{
+    HAL_StatusTypeDef status;
+    uint8_t regValue;
+
+    status = MPU6050_ReadRegister(
+                    hi2c,
+                    MPU6050_REG_FIFO_EN,
+                    &regValue);
+
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    *enabled =
+        (regValue & MPU6050_FIFO_ACCEL_Msk) ? 1U : 0U;
+
+    return HAL_OK;
+}
+
+
 /*=========================================================
  * Reset Device
  *========================================================*/
