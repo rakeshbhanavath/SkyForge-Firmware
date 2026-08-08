@@ -33,11 +33,14 @@
 
 #define MPU6050_REG_FIFO_EN              0x23U
 
+
 /*---------------- Interrupt Registers ----------------*/
 
 #define MPU6050_REG_INT_PIN_CFG          0x37U
 #define MPU6050_REG_INT_ENABLE           0x38U
 #define MPU6050_REG_INT_STATUS           0x3AU
+
+#define MPU6050_FIFO_OFLOW_INT_Msk      (1U << 4)
 
 /*---------------- Accelerometer Output Registers ----------------*/
 

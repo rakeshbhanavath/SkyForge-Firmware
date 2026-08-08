@@ -15,6 +15,7 @@ extern "C"
 
 #include "mpu6050_defs.h"
 #include "mpu6050_types.h"
+#include "mpu6050_reg.h"
 #include "mpu6050_utils.h"
 
 /*=========================================================

@@ -1698,26 +1698,55 @@ void APP_Test_MPU6050(void)
 
 
 
-
                                                     /*==============================================================================
-                                                     * TEST 7.8 : FIFO Packet Read Verification
+                                                     * TEST 7.9 : FIFO Overflow and Raw Packet Diagnostic
                                                      *==============================================================================
                                                      *
                                                      * Objective
                                                      * ---------
-                                                     * Read one complete sensor packet from the FIFO and verify
-                                                     * the decoded accelerometer, temperature and gyroscope data.
+                                                     * 1. Verify FIFO overflow status.
+                                                     * 2. Verify complete 14-byte FIFO packet reads.
+                                                     * 3. Inspect raw FIFO packet bytes.
+                                                     * 4. Verify packet data changes when the sensor is moved.
+                                                     *
+                                                     * Packet Format
+                                                     * -------------
+                                                     *
+                                                     * Byte  0-1   : Accel X
+                                                     * Byte  2-3   : Accel Y
+                                                     * Byte  4-5   : Accel Z
+                                                     * Byte  6-7   : Temperature
+                                                     * Byte  8-9   : Gyro X
+                                                     * Byte 10-11  : Gyro Y
+                                                     * Byte 12-13  : Gyro Z
+                                                     *
+                                                     * Total       : 14 bytes
                                                      *
                                                      *===========================================================================*/
 
-                                                    #if 1
+                                                    #if 0
 
-                                                        MPU6050_FIFOPacket_t packet;
+                                                        uint16_t fifoCount;
 
-                                                        uint16_t fifoCountBefore;
-                                                        uint16_t fifoCountAfter;
+                                                        uint8_t intStatus;
+
+                                                        uint8_t fifoBuffer[14];
 
                                                         char message[128];
+
+                                                        BSP_UART_TransmitString(&huart2,
+                                                                                "\r\n================================\r\n");
+
+                                                        BSP_UART_TransmitString(&huart2,
+                                                                                "FIFO Diagnostic Test\r\n");
+
+                                                        BSP_UART_TransmitString(&huart2,
+                                                                                "================================\r\n");
+
+
+                                                        /*---------------------------------------------------------
+                                                         * Initialize MPU6050
+                                                         *--------------------------------------------------------*/
 
                                                         BSP_UART_TransmitString(&huart2,
                                                                                 "\r\nInitializing MPU6050...\r\n");
@@ -1730,121 +1759,1348 @@ void APP_Test_MPU6050(void)
                                                             while (1);
                                                         }
 
+
+                                                        /*---------------------------------------------------------
+                                                         * Configure Sampling
+                                                         *--------------------------------------------------------*/
+
+                                                        if (MPU6050_SetDLPF(&hi2c1,
+                                                                            MPU6050_DLPF_BW_94HZ) != HAL_OK)
+                                                        {
+                                                            BSP_UART_TransmitString(&huart2,
+                                                                                    "DLPF Configuration Failed\r\n");
+
+                                                            while (1);
+                                                        }
+
+                                                        if (MPU6050_SetSampleRateDivider(&hi2c1,
+                                                                                         9U) != HAL_OK)
+                                                        {
+                                                            BSP_UART_TransmitString(&huart2,
+                                                                                    "Sample Rate Configuration Failed\r\n");
+
+                                                            while (1);
+                                                        }
+
+                                                        BSP_UART_TransmitString(&huart2,
+                                                                                "Sampling Configuration Successful\r\n");
+
+
                                                         BSP_UART_TransmitString(&huart2,
                                                                                 "MPU6050 Initialization Successful\r\n");
+
 
                                                         /*---------------------------------------------------------
                                                          * Enable FIFO
                                                          *--------------------------------------------------------*/
 
-                                                        MPU6050_EnableFIFO(&hi2c1);
+                                                        if (MPU6050_EnableFIFO(&hi2c1) != HAL_OK)
+                                                        {
+                                                            BSP_UART_TransmitString(&huart2,
+                                                                                    "FIFO Enable Failed\r\n");
 
-                                                        MPU6050_EnableAccelFIFO(&hi2c1);
+                                                            while (1);
+                                                        }
 
-                                                        MPU6050_EnableGyroXFIFO(&hi2c1);
-                                                        MPU6050_EnableGyroYFIFO(&hi2c1);
-                                                        MPU6050_EnableGyroZFIFO(&hi2c1);
-
-                                                        MPU6050_EnableTempFIFO(&hi2c1);
-
-                                                        HAL_Delay(500);
 
                                                         /*---------------------------------------------------------
-                                                         * Stop FIFO Filling
+                                                         * Enable FIFO Sources
                                                          *--------------------------------------------------------*/
 
-                                                        MPU6050_DisableAccelFIFO(&hi2c1);
+                                                        if (MPU6050_EnableAccelFIFO(&hi2c1) != HAL_OK)
+                                                        {
+                                                            BSP_UART_TransmitString(&huart2,
+                                                                                    "Accel FIFO Enable Failed\r\n");
 
-                                                        MPU6050_DisableGyroXFIFO(&hi2c1);
-                                                        MPU6050_DisableGyroYFIFO(&hi2c1);
-                                                        MPU6050_DisableGyroZFIFO(&hi2c1);
+                                                            while (1);
+                                                        }
 
-                                                        MPU6050_DisableTempFIFO(&hi2c1);
+                                                        if (MPU6050_EnableGyroXFIFO(&hi2c1) != HAL_OK)
+                                                        {
+                                                            BSP_UART_TransmitString(&huart2,
+                                                                                    "Gyro X FIFO Enable Failed\r\n");
+
+                                                            while (1);
+                                                        }
+
+                                                        if (MPU6050_EnableGyroYFIFO(&hi2c1) != HAL_OK)
+                                                        {
+                                                            BSP_UART_TransmitString(&huart2,
+                                                                                    "Gyro Y FIFO Enable Failed\r\n");
+
+                                                            while (1);
+                                                        }
+
+                                                        if (MPU6050_EnableGyroZFIFO(&hi2c1) != HAL_OK)
+                                                        {
+                                                            BSP_UART_TransmitString(&huart2,
+                                                                                    "Gyro Z FIFO Enable Failed\r\n");
+
+                                                            while (1);
+                                                        }
+
+                                                        if (MPU6050_EnableTempFIFO(&hi2c1) != HAL_OK)
+                                                        {
+                                                            BSP_UART_TransmitString(&huart2,
+                                                                                    "Temperature FIFO Enable Failed\r\n");
+
+                                                            while (1);
+                                                        }
+
+
+                                                        /*---------------------------------------------------------
+                                                         * Reset FIFO
+                                                         *--------------------------------------------------------*/
+
+                                                        if (MPU6050_ResetFIFO(&hi2c1) != HAL_OK)
+                                                        {
+                                                            BSP_UART_TransmitString(&huart2,
+                                                                                    "FIFO Reset Failed\r\n");
+
+                                                            while (1);
+                                                        }
+
+                                                        BSP_UART_TransmitString(&huart2,
+                                                                                "FIFO Reset Successful\r\n");
+
+
+                                                        /*---------------------------------------------------------
+                                                         * Allow FIFO to collect some samples
+                                                         *--------------------------------------------------------*/
+
+                                                        HAL_Delay(50);
+
 
                                                         while (1)
                                                         {
-                                                            MPU6050_GetFIFOCount(&hi2c1,
-                                                                                 &fifoCountBefore);
+                                                            /*-----------------------------------------------------
+                                                             * Read FIFO Count
+                                                             *----------------------------------------------------*/
 
-                                                            sprintf(message,
-                                                                    "\r\nFIFO Count Before : %u bytes\r\n",
-                                                                    fifoCountBefore);
-
-                                                            BSP_UART_TransmitString(&huart2,
-                                                                                    message);
-
-                                                            if (MPU6050_ReadFIFOPacket(&hi2c1,
-                                                                                       &packet) != HAL_OK)
+                                                            if (MPU6050_GetFIFOCount(&hi2c1,
+                                                                                     &fifoCount) != HAL_OK)
                                                             {
                                                                 BSP_UART_TransmitString(&huart2,
-                                                                                        "FIFO Packet Read Failed\r\n");
+                                                                                        "FIFO Count Read Failed\r\n");
 
                                                                 continue;
                                                             }
 
-                                                            sprintf(message,
-                                                                    "Accel X : %6d\r\n",
-                                                                    packet.accel.x);
-                                                            BSP_UART_TransmitString(&huart2, message);
+
+                                                            /*-----------------------------------------------------
+                                                             * Read Interrupt Status
+                                                             *----------------------------------------------------*/
+
+                                                            if (MPU6050_GetInterruptStatus(&hi2c1,
+                                                                                           &intStatus) != HAL_OK)
+                                                            {
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "INT_STATUS Read Failed\r\n");
+
+                                                                continue;
+                                                            }
+
+
+                                                            /*-----------------------------------------------------
+                                                             * Check FIFO Overflow
+                                                             *----------------------------------------------------*/
+
+                                                            if (intStatus & MPU6050_FIFO_OFLOW_INT_Msk)
+                                                            {
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "\r\n*** FIFO OVERFLOW DETECTED ***\r\n");
+
+                                                                sprintf(message,
+                                                                        "FIFO Count : %u bytes\r\n",
+                                                                        fifoCount);
+
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        message);
+
+                                                                /*---------------------------------------------
+                                                                 * Clear FIFO after overflow
+                                                                 *--------------------------------------------*/
+
+                                                                MPU6050_ResetFIFO(&hi2c1);
+
+                                                                HAL_Delay(10);
+
+                                                                continue;
+                                                            }
+
+
+                                                            /*-----------------------------------------------------
+                                                             * Need One Complete Packet
+                                                             *----------------------------------------------------*/
+
+                                                            if (fifoCount < 14U)
+                                                            {
+                                                                HAL_Delay(1);
+
+                                                                continue;
+                                                            }
+
+
+                                                            /*-----------------------------------------------------
+                                                             * Read Exactly 14 Raw Bytes
+                                                             *----------------------------------------------------*/
+
+                                                            if (MPU6050_ReadFIFOBuffer(&hi2c1,
+                                                                                       fifoBuffer,
+                                                                                       14U) != HAL_OK)
+                                                            {
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "FIFO Raw Read Failed\r\n");
+
+                                                                continue;
+                                                            }
+
+
+                                                            /*-----------------------------------------------------
+                                                             * Print FIFO Count
+                                                             *----------------------------------------------------*/
 
                                                             sprintf(message,
-                                                                    "Accel Y : %6d\r\n",
-                                                                    packet.accel.y);
-                                                            BSP_UART_TransmitString(&huart2, message);
-
-                                                            sprintf(message,
-                                                                    "Accel Z : %6d\r\n\r\n",
-                                                                    packet.accel.z);
-                                                            BSP_UART_TransmitString(&huart2, message);
-
-                                                            sprintf(message,
-                                                                    "Temperature : %.2f C\r\n\r\n",
-                                                                    packet.temp.temperature);
-                                                            BSP_UART_TransmitString(&huart2, message);
-
-                                                            sprintf(message,
-                                                                    "Gyro X : %6d\r\n",
-                                                                    packet.gyro.x);
-                                                            BSP_UART_TransmitString(&huart2, message);
-
-                                                            sprintf(message,
-                                                                    "Gyro Y : %6d\r\n",
-                                                                    packet.gyro.y);
-                                                            BSP_UART_TransmitString(&huart2, message);
-
-                                                            sprintf(message,
-                                                                    "Gyro Z : %6d\r\n",
-                                                                    packet.gyro.z);
-                                                            BSP_UART_TransmitString(&huart2, message);
-
-                                                            MPU6050_GetFIFOCount(&hi2c1,
-                                                                                 &fifoCountAfter);
-
-                                                            sprintf(message,
-                                                                    "\r\nFIFO Count After : %u bytes\r\n",
-                                                                    fifoCountAfter);
+                                                                    "\r\nFIFO Count : %u bytes\r\n",
+                                                                    fifoCount);
 
                                                             BSP_UART_TransmitString(&huart2,
                                                                                     message);
 
-                                                            if ((fifoCountBefore - fifoCountAfter) == 14)
+
+                                                            /*-----------------------------------------------------
+                                                             * Print Raw FIFO Bytes
+                                                             *----------------------------------------------------*/
+
+                                                            BSP_UART_TransmitString(&huart2,
+                                                                                    "FIFO RAW : ");
+
+                                                            for (uint8_t i = 0; i < 14U; i++)
                                                             {
+                                                                sprintf(message,
+                                                                        "%02X ",
+                                                                        fifoBuffer[i]);
+
                                                                 BSP_UART_TransmitString(&huart2,
-                                                                                        "Verification : PASSED\r\n");
-                                                            }
-                                                            else
-                                                            {
-                                                                BSP_UART_TransmitString(&huart2,
-                                                                                        "Verification : FAILED\r\n");
+                                                                                        message);
                                                             }
 
                                                             BSP_UART_TransmitString(&huart2,
-                                                                                    "--------------------------------\r\n");
+                                                                                    "\r\n");
 
-                                                            HAL_Delay(1000);
+
+                                                            /*-----------------------------------------------------
+                                                             * Print Packet Boundaries
+                                                             *----------------------------------------------------*/
+
+                                                            BSP_UART_TransmitString(&huart2,
+                                                                                    "Format  : "
+                                                                                    "AX AY AZ TEMP GX GY GZ\r\n");
+
+
+                                                            /*-----------------------------------------------------
+                                                             * Delay Before Next Diagnostic Packet
+                                                             *
+                                                             * Keep this short so FIFO does not fill.
+                                                             *----------------------------------------------------*/
+
+                                                            HAL_Delay(50);
                                                         }
 
                                                     #endif
+
+
+                                                        /*==============================================================================
+                                                         * TEST 7.10 : High-Speed FIFO Drain Verification
+                                                         *==============================================================================
+                                                         *
+                                                         * Objective
+                                                         * ---------
+                                                         * Continuously drain complete 14-byte FIFO packets without allowing UART
+                                                         * printing to become the bottleneck.
+                                                         *
+                                                         * One FIFO packet:
+                                                         *
+                                                         *   Accelerometer : 6 bytes
+                                                         *   Temperature   : 2 bytes
+                                                         *   Gyroscope     : 6 bytes
+                                                         *   --------------------------
+                                                         *   Total         : 14 bytes
+                                                         *
+                                                         * UART output is generated only once every 100 packets.
+                                                         *
+                                                         *===========================================================================*/
+
+                                                        #if 0
+
+                                                            uint16_t fifoCount;
+
+                                                            uint8_t intStatus;
+
+                                                            uint8_t fifoBuffer[14];
+
+                                                            uint32_t packetCount = 0U;
+                                                            uint32_t overflowCount = 0U;
+
+                                                            char message[128];
+
+
+                                                            /*---------------------------------------------------------
+                                                             * Initialize MPU6050
+                                                             *--------------------------------------------------------*/
+
+                                                            BSP_UART_TransmitString(&huart2,
+                                                                                    "\r\nInitializing MPU6050...\r\n");
+
+                                                            if (MPU6050_Init(&hi2c1) != HAL_OK)
+                                                            {
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "MPU6050 Initialization Failed\r\n");
+
+                                                                while (1);
+                                                            }
+
+                                                            BSP_UART_TransmitString(&huart2,
+                                                                                    "MPU6050 Initialization Successful\r\n");
+
+
+                                                            /*---------------------------------------------------------
+                                                             * Configure Sampling
+                                                             *
+                                                             * DLPF     : 94 Hz
+                                                             * Sample   : 100 Hz
+                                                             * Divider  : 9
+                                                             *
+                                                             * Sample Rate = 1000 / (1 + 9)
+                                                             *             = 100 Hz
+                                                             *--------------------------------------------------------*/
+
+                                                            if (MPU6050_SetDLPF(&hi2c1,
+                                                                                MPU6050_DLPF_BW_94HZ) != HAL_OK)
+                                                            {
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "DLPF Configuration Failed\r\n");
+
+                                                                while (1);
+                                                            }
+
+
+                                                            if (MPU6050_SetSampleRateDivider(&hi2c1,
+                                                                                             9U) != HAL_OK)
+                                                            {
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "Sample Rate Configuration Failed\r\n");
+
+                                                                while (1);
+                                                            }
+
+
+                                                            BSP_UART_TransmitString(&huart2,
+                                                                                    "Sampling Configuration Successful\r\n");
+
+
+                                                            /*---------------------------------------------------------
+                                                             * Enable FIFO
+                                                             *--------------------------------------------------------*/
+
+                                                            if (MPU6050_EnableFIFO(&hi2c1) != HAL_OK)
+                                                            {
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "FIFO Enable Failed\r\n");
+
+                                                                while (1);
+                                                            }
+
+
+                                                            /*---------------------------------------------------------
+                                                             * Enable FIFO Sources
+                                                             *--------------------------------------------------------*/
+
+                                                            if (MPU6050_EnableAccelFIFO(&hi2c1) != HAL_OK)
+                                                            {
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "Accel FIFO Enable Failed\r\n");
+
+                                                                while (1);
+                                                            }
+
+                                                            if (MPU6050_EnableGyroXFIFO(&hi2c1) != HAL_OK)
+                                                            {
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "Gyro X FIFO Enable Failed\r\n");
+
+                                                                while (1);
+                                                            }
+
+                                                            if (MPU6050_EnableGyroYFIFO(&hi2c1) != HAL_OK)
+                                                            {
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "Gyro Y FIFO Enable Failed\r\n");
+
+                                                                while (1);
+                                                            }
+
+                                                            if (MPU6050_EnableGyroZFIFO(&hi2c1) != HAL_OK)
+                                                            {
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "Gyro Z FIFO Enable Failed\r\n");
+
+                                                                while (1);
+                                                            }
+
+                                                            if (MPU6050_EnableTempFIFO(&hi2c1) != HAL_OK)
+                                                            {
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "Temperature FIFO Enable Failed\r\n");
+
+                                                                while (1);
+                                                            }
+
+
+                                                            /*---------------------------------------------------------
+                                                             * Reset FIFO
+                                                             *--------------------------------------------------------*/
+
+                                                            if (MPU6050_ResetFIFO(&hi2c1) != HAL_OK)
+                                                            {
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "FIFO Reset Failed\r\n");
+
+                                                                while (1);
+                                                            }
+
+                                                            BSP_UART_TransmitString(&huart2,
+                                                                                    "FIFO Ready\r\n");
+
+
+                                                            /*---------------------------------------------------------
+                                                             * High-Speed FIFO Drain
+                                                             *--------------------------------------------------------*/
+
+                                                            while (1)
+                                                            {
+                                                                /*-----------------------------------------------------
+                                                                 * Read FIFO Count
+                                                                 *----------------------------------------------------*/
+
+                                                                if (MPU6050_GetFIFOCount(&hi2c1,
+                                                                                         &fifoCount) != HAL_OK)
+                                                                {
+                                                                    continue;
+                                                                }
+
+
+                                                                /*-----------------------------------------------------
+                                                                 * Check FIFO Overflow
+                                                                 *----------------------------------------------------*/
+
+                                                                if (MPU6050_GetInterruptStatus(&hi2c1,
+                                                                                               &intStatus) != HAL_OK)
+                                                                {
+                                                                    continue;
+                                                                }
+
+
+                                                                if (intStatus & MPU6050_FIFO_OFLOW_INT_Msk)
+                                                                {
+                                                                    overflowCount++;
+
+                                                                    MPU6050_ResetFIFO(&hi2c1);
+
+                                                                    continue;
+                                                                }
+
+
+                                                                /*-----------------------------------------------------
+                                                                 * Wait Until Complete Packet Available
+                                                                 *----------------------------------------------------*/
+
+                                                                if (fifoCount < 14U)
+                                                                {
+                                                                    continue;
+                                                                }
+
+
+                                                                /*-----------------------------------------------------
+                                                                 * Read One Complete Packet
+                                                                 *----------------------------------------------------*/
+
+                                                                if (MPU6050_ReadFIFOBuffer(&hi2c1,
+                                                                                           fifoBuffer,
+                                                                                           14U) != HAL_OK)
+                                                                {
+                                                                    continue;
+                                                                }
+
+
+                                                                packetCount++;
+
+
+                                                                /*-----------------------------------------------------
+                                                                 * Print Only Every 100 Packets
+                                                                 *----------------------------------------------------*/
+
+                                                                if ((packetCount % 100U) == 0U)
+                                                                {
+                                                                    sprintf(message,
+                                                                            "\r\nPackets Read : %lu\r\n",
+                                                                            packetCount);
+
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            message);
+
+
+                                                                    sprintf(message,
+                                                                            "FIFO Count   : %u bytes\r\n",
+                                                                            fifoCount);
+
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            message);
+
+
+                                                                    sprintf(message,
+                                                                            "Overflow Count: %lu\r\n",
+                                                                            overflowCount);
+
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            message);
+
+
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "FIFO RAW     : ");
+
+                                                                    for (uint8_t i = 0U; i < 14U; i++)
+                                                                    {
+                                                                        sprintf(message,
+                                                                                "%02X ",
+                                                                                fifoBuffer[i]);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+                                                                    }
+
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "\r\n");
+                                                                }
+                                                            }
+
+                                                        #endif
+
+
+
+
+
+                                                            /*==============================================================================
+                                                             * TEST 7.11 : Live FIFO Sensor Monitor
+                                                             *==============================================================================
+                                                             *
+                                                             * Objective
+                                                             * ---------
+                                                             * Continuously drain the FIFO while periodically displaying decoded
+                                                             * accelerometer, temperature and gyroscope values.
+                                                             *
+                                                             * FIFO packet:
+                                                             *
+                                                             *   Accelerometer : 6 bytes
+                                                             *   Temperature   : 2 bytes
+                                                             *   Gyroscope     : 6 bytes
+                                                             *   --------------------------
+                                                             *   Total         : 14 bytes
+                                                             *
+                                                             * The FIFO is drained continuously.
+                                                             * UART output is limited to approximately 10 packets/second.
+                                                             *
+                                                             *===========================================================================*/
+
+                                                            #if 0
+
+                                                                MPU6050_FIFOPacket_t packet;
+
+                                                                uint16_t fifoCount;
+
+                                                                uint8_t intStatus;
+
+                                                                uint32_t packetCount = 0U;
+                                                                uint32_t overflowCount = 0U;
+
+                                                                uint32_t lastPrintTime = 0U;
+
+                                                                char message[128];
+
+
+                                                                /*---------------------------------------------------------
+                                                                 * Initialize MPU6050
+                                                                 *--------------------------------------------------------*/
+
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "\r\nInitializing MPU6050...\r\n");
+
+                                                                if (MPU6050_Init(&hi2c1) != HAL_OK)
+                                                                {
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "MPU6050 Initialization Failed\r\n");
+
+                                                                    while (1);
+                                                                }
+
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "MPU6050 Initialization Successful\r\n");
+
+
+                                                                /*---------------------------------------------------------
+                                                                 * Configure DLPF
+                                                                 *
+                                                                 * DLPF = 94 Hz
+                                                                 *--------------------------------------------------------*/
+
+                                                                if (MPU6050_SetDLPF(&hi2c1,
+                                                                                    MPU6050_DLPF_BW_94HZ) != HAL_OK)
+                                                                {
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "DLPF Configuration Failed\r\n");
+
+                                                                    while (1);
+                                                                }
+
+
+                                                                /*---------------------------------------------------------
+                                                                 * Configure Sample Rate
+                                                                 *
+                                                                 * Sample Rate = 1000 / (1 + divider)
+                                                                 *
+                                                                 * divider = 9
+                                                                 *
+                                                                 * Sample Rate = 100 Hz
+                                                                 *--------------------------------------------------------*/
+
+                                                                if (MPU6050_SetSampleRateDivider(&hi2c1,
+                                                                                                 9U) != HAL_OK)
+                                                                {
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "Sample Rate Configuration Failed\r\n");
+
+                                                                    while (1);
+                                                                }
+
+
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "Sampling Configuration Successful\r\n");
+
+
+                                                                /*---------------------------------------------------------
+                                                                 * Enable FIFO
+                                                                 *--------------------------------------------------------*/
+
+                                                                if (MPU6050_EnableFIFO(&hi2c1) != HAL_OK)
+                                                                {
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "FIFO Enable Failed\r\n");
+
+                                                                    while (1);
+                                                                }
+
+
+                                                                /*---------------------------------------------------------
+                                                                 * Enable FIFO Sources
+                                                                 *--------------------------------------------------------*/
+
+                                                                if (MPU6050_EnableAccelFIFO(&hi2c1) != HAL_OK)
+                                                                {
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "Accel FIFO Enable Failed\r\n");
+
+                                                                    while (1);
+                                                                }
+
+                                                                if (MPU6050_EnableGyroXFIFO(&hi2c1) != HAL_OK)
+                                                                {
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "Gyro X FIFO Enable Failed\r\n");
+
+                                                                    while (1);
+                                                                }
+
+                                                                if (MPU6050_EnableGyroYFIFO(&hi2c1) != HAL_OK)
+                                                                {
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "Gyro Y FIFO Enable Failed\r\n");
+
+                                                                    while (1);
+                                                                }
+
+                                                                if (MPU6050_EnableGyroZFIFO(&hi2c1) != HAL_OK)
+                                                                {
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "Gyro Z FIFO Enable Failed\r\n");
+
+                                                                    while (1);
+                                                                }
+
+                                                                if (MPU6050_EnableTempFIFO(&hi2c1) != HAL_OK)
+                                                                {
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "Temperature FIFO Enable Failed\r\n");
+
+                                                                    while (1);
+                                                                }
+
+
+                                                                /*---------------------------------------------------------
+                                                                 * Reset FIFO
+                                                                 *--------------------------------------------------------*/
+
+                                                                if (MPU6050_ResetFIFO(&hi2c1) != HAL_OK)
+                                                                {
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "FIFO Reset Failed\r\n");
+
+                                                                    while (1);
+                                                                }
+
+
+                                                                BSP_UART_TransmitString(&huart2,
+                                                                                        "FIFO Ready\r\n");
+
+
+                                                                /*---------------------------------------------------------
+                                                                 * Start Timer
+                                                                 *--------------------------------------------------------*/
+
+                                                                lastPrintTime = HAL_GetTick();
+
+
+                                                                /*---------------------------------------------------------
+                                                                 * Main FIFO Processing Loop
+                                                                 *--------------------------------------------------------*/
+
+                                                                while (1)
+                                                                {
+                                                                    /*-----------------------------------------------------
+                                                                     * Read FIFO Count
+                                                                     *----------------------------------------------------*/
+
+                                                                    if (MPU6050_GetFIFOCount(&hi2c1,
+                                                                                             &fifoCount) != HAL_OK)
+                                                                    {
+                                                                        continue;
+                                                                    }
+
+
+                                                                    /*-----------------------------------------------------
+                                                                     * Read Interrupt Status
+                                                                     *----------------------------------------------------*/
+
+                                                                    if (MPU6050_GetInterruptStatus(&hi2c1,
+                                                                                                   &intStatus) != HAL_OK)
+                                                                    {
+                                                                        continue;
+                                                                    }
+
+
+                                                                    /*-----------------------------------------------------
+                                                                     * FIFO Overflow
+                                                                     *----------------------------------------------------*/
+
+                                                                    if (intStatus & MPU6050_FIFO_OFLOW_INT_Msk)
+                                                                    {
+                                                                        overflowCount++;
+
+                                                                        MPU6050_ResetFIFO(&hi2c1);
+
+                                                                        continue;
+                                                                    }
+
+
+                                                                    /*-----------------------------------------------------
+                                                                     * Wait Until Complete Packet Available
+                                                                     *----------------------------------------------------*/
+
+                                                                    if (fifoCount < 14U)
+                                                                    {
+                                                                        continue;
+                                                                    }
+
+
+                                                                    /*-----------------------------------------------------
+                                                                     * Read One FIFO Packet
+                                                                     *----------------------------------------------------*/
+
+                                                                    if (MPU6050_ReadFIFOPacket(&hi2c1,
+                                                                                               &packet) != HAL_OK)
+                                                                    {
+                                                                        continue;
+                                                                    }
+
+
+                                                                    packetCount++;
+
+
+                                                                    /*-----------------------------------------------------
+                                                                     * Print Approximately Every 100 ms
+                                                                     *--------------------------------------------------------*/
+
+                                                                    if ((HAL_GetTick() - lastPrintTime) >= 100U)
+                                                                    {
+                                                                        lastPrintTime = HAL_GetTick();
+
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "\r\n--------------------------------\r\n");
+
+
+                                                                        sprintf(message,
+                                                                                "Packets Read : %lu\r\n",
+                                                                                packetCount);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        sprintf(message,
+                                                                                "FIFO Count   : %u bytes\r\n",
+                                                                                fifoCount);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        sprintf(message,
+                                                                                "Overflow Count: %lu\r\n\r\n",
+                                                                                overflowCount);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        /*-------------------------------------------------
+                                                                         * Accelerometer
+                                                                         *------------------------------------------------*/
+
+                                                                        sprintf(message,
+                                                                                "Accel X : %6d\r\n",
+                                                                                packet.accel.x);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        sprintf(message,
+                                                                                "Accel Y : %6d\r\n",
+                                                                                packet.accel.y);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        sprintf(message,
+                                                                                "Accel Z : %6d\r\n\r\n",
+                                                                                packet.accel.z);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        /*-------------------------------------------------
+                                                                         * Temperature
+                                                                         *------------------------------------------------*/
+
+                                                                        sprintf(message,
+                                                                                "Temperature : %.2f C\r\n\r\n",
+                                                                                packet.temp.temperature);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        /*-------------------------------------------------
+                                                                         * Gyroscope
+                                                                         *------------------------------------------------*/
+
+                                                                        sprintf(message,
+                                                                                "Gyro X : %6d\r\n",
+                                                                                packet.gyro.x);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        sprintf(message,
+                                                                                "Gyro Y : %6d\r\n",
+                                                                                packet.gyro.y);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        sprintf(message,
+                                                                                "Gyro Z : %6d\r\n",
+                                                                                packet.gyro.z);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+                                                                    }
+                                                                }
+
+                                                            #endif
+
+
+                                                                /*==============================================================================
+                                                                 * TEST 7.12 : Sensor Physical Unit Conversion
+                                                                 *==============================================================================
+                                                                 *
+                                                                 * Objective
+                                                                 * ---------
+                                                                 * Read live FIFO packets and convert raw sensor values into physical units.
+                                                                 *
+                                                                 * Accelerometer:
+                                                                 *     ±2 g
+                                                                 *     16384 LSB/g
+                                                                 *
+                                                                 * Gyroscope:
+                                                                 *     ±250 dps
+                                                                 *     131 LSB/(°/s)
+                                                                 *
+                                                                 * Temperature:
+                                                                 *     Temperature = Raw / 340 + 36.53
+                                                                 *
+                                                                 *===========================================================================*/
+
+                                                                #if 1
+
+                                                                    MPU6050_FIFOPacket_t packet;
+
+                                                                    uint16_t fifoCount;
+
+                                                                    uint8_t intStatus;
+
+                                                                    uint32_t packetCount = 0U;
+                                                                    uint32_t overflowCount = 0U;
+
+                                                                    uint32_t lastPrintTime = 0U;
+
+                                                                    float accelX_g;
+                                                                    float accelY_g;
+                                                                    float accelZ_g;
+
+                                                                    float gyroX_dps;
+                                                                    float gyroY_dps;
+                                                                    float gyroZ_dps;
+
+                                                                    char message[128];
+
+
+                                                                    /*---------------------------------------------------------
+                                                                     * Initialize MPU6050
+                                                                     *--------------------------------------------------------*/
+
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "\r\nInitializing MPU6050...\r\n");
+
+                                                                    if (MPU6050_Init(&hi2c1) != HAL_OK)
+                                                                    {
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "MPU6050 Initialization Failed\r\n");
+
+                                                                        while (1);
+                                                                    }
+
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "MPU6050 Initialization Successful\r\n");
+
+
+                                                                    /*---------------------------------------------------------
+                                                                     * Configure Accelerometer Range
+                                                                     *
+                                                                     * ±2 g
+                                                                     *--------------------------------------------------------*/
+
+                                                                    if (MPU6050_SetAccelRange(&hi2c1,
+                                                                                              MPU6050_ACCEL_RANGE_2G) != HAL_OK)
+                                                                    {
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "Accel Range Configuration Failed\r\n");
+
+                                                                        while (1);
+                                                                    }
+
+
+                                                                    /*---------------------------------------------------------
+                                                                     * Configure Gyroscope Range
+                                                                     *
+                                                                     * ±250 dps
+                                                                     *--------------------------------------------------------*/
+
+                                                                    if (MPU6050_SetGyroRange(&hi2c1,
+                                                                                             MPU6050_GYRO_RANGE_250DPS) != HAL_OK)
+                                                                    {
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "Gyro Range Configuration Failed\r\n");
+
+                                                                        while (1);
+                                                                    }
+
+
+                                                                    /*---------------------------------------------------------
+                                                                     * Configure DLPF
+                                                                     *--------------------------------------------------------*/
+
+                                                                    if (MPU6050_SetDLPF(&hi2c1,
+                                                                                        MPU6050_DLPF_BW_94HZ) != HAL_OK)
+                                                                    {
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "DLPF Configuration Failed\r\n");
+
+                                                                        while (1);
+                                                                    }
+
+
+                                                                    /*---------------------------------------------------------
+                                                                     * Configure Sample Rate
+                                                                     *
+                                                                     * 1000 / (1 + 9) = 100 Hz
+                                                                     *--------------------------------------------------------*/
+
+                                                                    if (MPU6050_SetSampleRateDivider(&hi2c1,
+                                                                                                     9U) != HAL_OK)
+                                                                    {
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "Sample Rate Configuration Failed\r\n");
+
+                                                                        while (1);
+                                                                    }
+
+
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "Sensor Configuration Successful\r\n");
+
+
+                                                                    /*---------------------------------------------------------
+                                                                     * Enable FIFO
+                                                                     *--------------------------------------------------------*/
+
+                                                                    if (MPU6050_EnableFIFO(&hi2c1) != HAL_OK)
+                                                                    {
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "FIFO Enable Failed\r\n");
+
+                                                                        while (1);
+                                                                    }
+
+
+                                                                    /*---------------------------------------------------------
+                                                                     * Enable FIFO Sources
+                                                                     *--------------------------------------------------------*/
+
+                                                                    if (MPU6050_EnableAccelFIFO(&hi2c1) != HAL_OK)
+                                                                    {
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "Accel FIFO Enable Failed\r\n");
+
+                                                                        while (1);
+                                                                    }
+
+                                                                    if (MPU6050_EnableGyroXFIFO(&hi2c1) != HAL_OK)
+                                                                    {
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "Gyro X FIFO Enable Failed\r\n");
+
+                                                                        while (1);
+                                                                    }
+
+                                                                    if (MPU6050_EnableGyroYFIFO(&hi2c1) != HAL_OK)
+                                                                    {
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "Gyro Y FIFO Enable Failed\r\n");
+
+                                                                        while (1);
+                                                                    }
+
+                                                                    if (MPU6050_EnableGyroZFIFO(&hi2c1) != HAL_OK)
+                                                                    {
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "Gyro Z FIFO Enable Failed\r\n");
+
+                                                                        while (1);
+                                                                    }
+
+                                                                    if (MPU6050_EnableTempFIFO(&hi2c1) != HAL_OK)
+                                                                    {
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "Temperature FIFO Enable Failed\r\n");
+
+                                                                        while (1);
+                                                                    }
+
+
+                                                                    /*---------------------------------------------------------
+                                                                     * Reset FIFO
+                                                                     *--------------------------------------------------------*/
+
+                                                                    if (MPU6050_ResetFIFO(&hi2c1) != HAL_OK)
+                                                                    {
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "FIFO Reset Failed\r\n");
+
+                                                                        while (1);
+                                                                    }
+
+
+                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                            "FIFO Ready\r\n");
+
+
+                                                                    lastPrintTime = HAL_GetTick();
+
+
+                                                                    /*---------------------------------------------------------
+                                                                     * Main Loop
+                                                                     *--------------------------------------------------------*/
+
+                                                                    while (1)
+                                                                    {
+                                                                        /*-----------------------------------------------------
+                                                                         * Get FIFO Count
+                                                                         *----------------------------------------------------*/
+
+                                                                        if (MPU6050_GetFIFOCount(&hi2c1,
+                                                                                                 &fifoCount) != HAL_OK)
+                                                                        {
+                                                                            continue;
+                                                                        }
+
+
+                                                                        /*-----------------------------------------------------
+                                                                         * Check FIFO Overflow
+                                                                         *----------------------------------------------------*/
+
+                                                                        if (MPU6050_GetInterruptStatus(&hi2c1,
+                                                                                                       &intStatus) != HAL_OK)
+                                                                        {
+                                                                            continue;
+                                                                        }
+
+
+                                                                        if (intStatus & MPU6050_FIFO_OFLOW_INT_Msk)
+                                                                        {
+                                                                            overflowCount++;
+
+                                                                            MPU6050_ResetFIFO(&hi2c1);
+
+                                                                            continue;
+                                                                        }
+
+
+                                                                        /*-----------------------------------------------------
+                                                                         * Wait for Complete Packet
+                                                                         *----------------------------------------------------*/
+
+                                                                        if (fifoCount < 14U)
+                                                                        {
+                                                                            continue;
+                                                                        }
+
+
+                                                                        /*-----------------------------------------------------
+                                                                         * Read FIFO Packet
+                                                                         *----------------------------------------------------*/
+
+                                                                        if (MPU6050_ReadFIFOPacket(&hi2c1,
+                                                                                                   &packet) != HAL_OK)
+                                                                        {
+                                                                            continue;
+                                                                        }
+
+
+                                                                        packetCount++;
+
+
+                                                                        /*-----------------------------------------------------
+                                                                         * Convert Accelerometer
+                                                                         *
+                                                                         * ±2 g = 16384 LSB/g
+                                                                         *----------------------------------------------------*/
+
+                                                                        accelX_g = (float)packet.accel.x / 16384.0f;
+                                                                        accelY_g = (float)packet.accel.y / 16384.0f;
+                                                                        accelZ_g = (float)packet.accel.z / 16384.0f;
+
+
+                                                                        /*-----------------------------------------------------
+                                                                         * Convert Gyroscope
+                                                                         *
+                                                                         * ±250 dps = 131 LSB/(°/s)
+                                                                         *----------------------------------------------------*/
+
+                                                                        gyroX_dps = (float)packet.gyro.x / 131.0f;
+                                                                        gyroY_dps = (float)packet.gyro.y / 131.0f;
+                                                                        gyroZ_dps = (float)packet.gyro.z / 131.0f;
+
+
+                                                                        /*-----------------------------------------------------
+                                                                         * Print Every 100 ms
+                                                                         *----------------------------------------------------*/
+
+                                                                        if ((HAL_GetTick() - lastPrintTime) >= 100U)
+                                                                        {
+                                                                            lastPrintTime = HAL_GetTick();
+
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "\r\n--------------------------------\r\n");
+
+
+                                                                            sprintf(message,
+                                                                                    "Packets Read  : %lu\r\n",
+                                                                                    packetCount);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "FIFO Count    : %u bytes\r\n",
+                                                                                    fifoCount);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "Overflow Count: %lu\r\n\r\n",
+                                                                                    overflowCount);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            /*-------------------------------------------------
+                                                                             * Raw Accelerometer
+                                                                             *------------------------------------------------*/
+
+                                                                            sprintf(message,
+                                                                                    "Accel Raw X : %6d\r\n",
+                                                                                    packet.accel.x);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "Accel Raw Y : %6d\r\n",
+                                                                                    packet.accel.y);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "Accel Raw Z : %6d\r\n\r\n",
+                                                                                    packet.accel.z);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            /*-------------------------------------------------
+                                                                             * Physical Accelerometer
+                                                                             *------------------------------------------------*/
+
+                                                                            sprintf(message,
+                                                                                    "Accel X : %+.3f g\r\n",
+                                                                                    accelX_g);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "Accel Y : %+.3f g\r\n",
+                                                                                    accelY_g);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "Accel Z : %+.3f g\r\n\r\n",
+                                                                                    accelZ_g);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            /*-------------------------------------------------
+                                                                             * Temperature
+                                                                             *-------------------------------------------------*/
+
+                                                                            sprintf(message,
+                                                                                    "Temperature : %.2f C\r\n\r\n",
+                                                                                    packet.temp.temperature);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            /*-------------------------------------------------
+                                                                             * Raw Gyroscope
+                                                                             *-------------------------------------------------*/
+
+                                                                            sprintf(message,
+                                                                                    "Gyro Raw X : %6d\r\n",
+                                                                                    packet.gyro.x);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "Gyro Raw Y : %6d\r\n",
+                                                                                    packet.gyro.y);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "Gyro Raw Z : %6d\r\n\r\n",
+                                                                                    packet.gyro.z);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            /*-------------------------------------------------
+                                                                             * Physical Gyroscope
+                                                                             *-------------------------------------------------*/
+
+                                                                            sprintf(message,
+                                                                                    "Gyro X : %+.2f dps\r\n",
+                                                                                    gyroX_dps);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "Gyro Y : %+.2f dps\r\n",
+                                                                                    gyroY_dps);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "Gyro Z : %+.2f dps\r\n",
+                                                                                    gyroZ_dps);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+                                                                        }
+                                                                    }
+
+                                                                #endif
+
+
 
 
 
