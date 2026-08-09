@@ -496,6 +496,49 @@ HAL_StatusTypeDef MPU6050_ReadTemperature(I2C_HandleTypeDef *hi2c,
 }
 
 
+/*=========================================================
+ * Read Calibrated IMU Data
+ *
+ * Reads:
+ *     Accelerometer
+ *     Gyroscope
+ *     Temperature
+ *
+ * Outputs:
+ *     Accel : g
+ *     Gyro  : degrees per second
+ *     Temp  : degrees Celsius
+ *=========================================================*/
+
+HAL_StatusTypeDef MPU6050_ReadIMU(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_IMUData_t *imu)
+{
+    if (MPU6050_ReadAccelCalibrated(
+            hi2c,
+            &imu->accel) != HAL_OK)
+    {
+        return HAL_ERROR;
+    }
+
+    if (MPU6050_ReadGyroCalibrated(
+            hi2c,
+            &imu->gyro) != HAL_OK)
+    {
+        return HAL_ERROR;
+    }
+
+    if (MPU6050_ReadTemperature(
+            hi2c,
+            &imu->temp) != HAL_OK)
+    {
+        return HAL_ERROR;
+    }
+
+    return HAL_OK;
+}
+
+
 HAL_StatusTypeDef MPU6050_SetSampleRateDivider(
     I2C_HandleTypeDef *hi2c,
     uint8_t divider)

@@ -5398,7 +5398,7 @@ void APP_Test_MPU6050(void)
                                                                                              *
                                                                                              *===========================================================================*/
 
-                                                                                            #if 1
+                                                                                            #if 0
 
                                                                                                 MPU6050_GyroCalibrated_t gyro;
 
@@ -5506,7 +5506,188 @@ void APP_Test_MPU6050(void)
 
                                                                                             #endif
 
+                                                                                                /*==============================================================================
+                                                                                                 * TEST 7.18 : Unified IMU Read
+                                                                                                 *==============================================================================
+                                                                                                 *
+                                                                                                 * Objective
+                                                                                                 * ---------
+                                                                                                 * Verify the unified MPU6050_ReadIMU() API.
+                                                                                                 *
+                                                                                                 * Output:
+                                                                                                 *
+                                                                                                 *     Accelerometer : g
+                                                                                                 *     Gyroscope     : degrees per second
+                                                                                                 *     Temperature   : degrees Celsius
+                                                                                                 *
+                                                                                                 *===========================================================================*/
 
+                                                                                                #if 1
+
+                                                                                                    MPU6050_IMUData_t imu;
+
+                                                                                                    char message[128];
+
+
+                                                                                                    /*---------------------------------------------------------
+                                                                                                     * Initialize MPU6050
+                                                                                                     *--------------------------------------------------------*/
+
+                                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                                            "\r\nInitializing MPU6050...\r\n");
+
+
+                                                                                                    if (MPU6050_Init(&hi2c1) != HAL_OK)
+                                                                                                    {
+                                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                                "MPU6050 Initialization Failed\r\n");
+
+                                                                                                        while (1);
+                                                                                                    }
+
+
+                                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                                            "MPU6050 Initialization Successful\r\n");
+
+
+                                                                                                    /*---------------------------------------------------------
+                                                                                                     * Configure sensor ranges
+                                                                                                     *--------------------------------------------------------*/
+
+                                                                                                    if (MPU6050_SetAccelRange(
+                                                                                                            &hi2c1,
+                                                                                                            MPU6050_ACCEL_RANGE_2G) != HAL_OK)
+                                                                                                    {
+                                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                                "Accel Range Configuration Failed\r\n");
+
+                                                                                                        while (1);
+                                                                                                    }
+
+
+                                                                                                    if (MPU6050_SetGyroRange(
+                                                                                                            &hi2c1,
+                                                                                                            MPU6050_GYRO_RANGE_250DPS) != HAL_OK)
+                                                                                                    {
+                                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                                "Gyro Range Configuration Failed\r\n");
+
+                                                                                                        while (1);
+                                                                                                    }
+
+
+                                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                                            "Accel : ±2 g\r\n");
+
+                                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                                            "Gyro  : ±250 dps\r\n");
+
+
+                                                                                                    HAL_Delay(1000);
+
+
+                                                                                                    /*---------------------------------------------------------
+                                                                                                     * Continuous IMU read
+                                                                                                     *--------------------------------------------------------*/
+
+                                                                                                    while (1)
+                                                                                                    {
+                                                                                                        if (MPU6050_ReadIMU(&hi2c1,
+                                                                                                                            &imu) != HAL_OK)
+                                                                                                        {
+                                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                                    "IMU Read Failed\r\n");
+
+                                                                                                            HAL_Delay(500);
+
+                                                                                                            continue;
+                                                                                                        }
+
+
+                                                                                                        /*-----------------------------------------------------
+                                                                                                         * Accelerometer
+                                                                                                         *----------------------------------------------------*/
+
+                                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                                "\r\nACCEL:\r\n");
+
+
+                                                                                                        sprintf(message,
+                                                                                                                "X : %+0.4f g\r\n",
+                                                                                                                imu.accel.x);
+
+                                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                                message);
+
+
+                                                                                                        sprintf(message,
+                                                                                                                "Y : %+0.4f g\r\n",
+                                                                                                                imu.accel.y);
+
+                                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                                message);
+
+
+                                                                                                        sprintf(message,
+                                                                                                                "Z : %+0.4f g\r\n",
+                                                                                                                imu.accel.z);
+
+                                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                                message);
+
+
+                                                                                                        /*-----------------------------------------------------
+                                                                                                         * Gyroscope
+                                                                                                         *----------------------------------------------------*/
+
+                                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                                "\r\nGYRO:\r\n");
+
+
+                                                                                                        sprintf(message,
+                                                                                                                "X : %+0.3f dps\r\n",
+                                                                                                                imu.gyro.x);
+
+                                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                                message);
+
+
+                                                                                                        sprintf(message,
+                                                                                                                "Y : %+0.3f dps\r\n",
+                                                                                                                imu.gyro.y);
+
+                                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                                message);
+
+
+                                                                                                        sprintf(message,
+                                                                                                                "Z : %+0.3f dps\r\n",
+                                                                                                                imu.gyro.z);
+
+                                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                                message);
+
+
+                                                                                                        /*-----------------------------------------------------
+                                                                                                         * Temperature
+                                                                                                         *----------------------------------------------------*/
+
+                                                                                                        sprintf(message,
+                                                                                                                "\r\nTemperature : %.2f C\r\n",
+                                                                                                                imu.temp.temperature);
+
+                                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                                message);
+
+
+                                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                                "--------------------------------\r\n");
+
+
+                                                                                                        HAL_Delay(500);
+                                                                                                    }
+
+                                                                                                #endif
 
 
 

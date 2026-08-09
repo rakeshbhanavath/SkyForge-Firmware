@@ -66,6 +66,23 @@ typedef enum
     MPU6050_ACCEL_RANGE_16G
 } MPU6050_AccelRange_t;
 
+
+/*=========================================================
+ * Calibrated IMU Data
+ *
+ * Accel : g
+ * Gyro  : degrees per second
+ * Temp  : degrees Celsius
+ *=========================================================*/
+
+typedef struct
+{
+    MPU6050_AccelCalibrated_t accel;
+    MPU6050_GyroCalibrated_t  gyro;
+    MPU6050_Temp_t             temp;
+
+} MPU6050_IMUData_t;
+
 typedef enum
 {
     MPU6050_GYRO_RANGE_250DPS = 0,

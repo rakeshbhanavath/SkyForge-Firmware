@@ -335,6 +335,17 @@ HAL_StatusTypeDef MPU6050_ReadGyroCalibrated(
     I2C_HandleTypeDef *hi2c,
     MPU6050_GyroCalibrated_t *gyro);
 
+/**
+ * @brief Read calibrated accelerometer, gyroscope and temperature.
+ *
+ * Accelerometer output : g
+ * Gyroscope output     : degrees per second
+ * Temperature output   : degrees Celsius
+ */
+HAL_StatusTypeDef MPU6050_ReadIMU(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_IMUData_t *imu);
+
 HAL_StatusTypeDef MPU6050_ReadTemperature(I2C_HandleTypeDef *hi2c,
                                           MPU6050_Temp_t *temp);
 
