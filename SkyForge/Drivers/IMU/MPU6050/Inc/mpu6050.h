@@ -297,8 +297,25 @@ HAL_StatusTypeDef MPU6050_IsTempFIFOEnabled(
  * Sensor Data Functions
  *========================================================*/
 
+
+
 HAL_StatusTypeDef MPU6050_ReadAccel(I2C_HandleTypeDef *hi2c,
                                     MPU6050_Accel_t *accel);
+
+/**
+ * @brief Read calibrated accelerometer data in g.
+ */
+HAL_StatusTypeDef MPU6050_ReadAccelRaw(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_Accel_t *accel);
+
+
+/**
+ * @brief Read calibrated accelerometer data in g.
+ */
+HAL_StatusTypeDef MPU6050_ReadAccelCalibrated(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_AccelCalibrated_t *accel);
 
 HAL_StatusTypeDef MPU6050_ReadGyro(I2C_HandleTypeDef *hi2c,
                                    MPU6050_Gyro_t *gyro);

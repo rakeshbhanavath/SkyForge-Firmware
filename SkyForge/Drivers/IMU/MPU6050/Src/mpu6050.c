@@ -177,7 +177,7 @@ HAL_StatusTypeDef MPU6050_ReadWHOAMI(I2C_HandleTypeDef *hi2c,
 
 
 
-
+/*
 
 HAL_StatusTypeDef MPU6050_ReadAccel(I2C_HandleTypeDef *hi2c,
                                     MPU6050_Accel_t *accel)
@@ -201,6 +201,93 @@ HAL_StatusTypeDef MPU6050_ReadAccel(I2C_HandleTypeDef *hi2c,
 
     return HAL_OK;
 }
+
+*/
+HAL_StatusTypeDef MPU6050_ReadAccelRaw(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_Accel_t *accel)
+{
+    uint8_t buffer[6];
+
+    if (HAL_I2C_Mem_Read(hi2c,
+                         MPU6050_I2C_ADDR_LOW,
+                         MPU6050_REG_ACCEL_XOUT_H,
+                         I2C_MEMADD_SIZE_8BIT,
+                         buffer,
+                         6,
+                         HAL_MAX_DELAY) != HAL_OK)
+    {
+        return HAL_ERROR;
+    }
+
+    accel->x = (int16_t)((buffer[0] << 8) | buffer[1]);
+    accel->y = (int16_t)((buffer[2] << 8) | buffer[3]);
+    accel->z = (int16_t)((buffer[4] << 8) | buffer[5]);
+
+    return HAL_OK;
+}
+
+
+/*=========================================================
+ * Read Accelerometer
+ *
+ * Compatibility wrapper.
+ * Returns raw accelerometer data.
+ *=========================================================*/
+
+HAL_StatusTypeDef MPU6050_ReadAccel(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_Accel_t *accel)
+{
+    return MPU6050_ReadAccelRaw(hi2c, accel);
+}
+
+
+
+/*=========================================================
+ * Read Calibrated Accelerometer
+ *
+ * Output:
+ *     X, Y, Z in g
+ *
+ * Calibration:
+ *
+ *     X Offset = +678 raw
+ *     Y Offset = -223 raw
+ *     Z Offset = -1284 raw
+ *
+ *     X Scale = 16237.5 raw/g
+ *     Y Scale = 16332.7 raw/g
+ *     Z Scale = 16420.5 raw/g
+ *
+ * NOTE:
+ * These are provisional calibration values obtained from
+ * stationary multi-orientation measurements.
+ *=========================================================*/
+
+HAL_StatusTypeDef MPU6050_ReadAccelCalibrated(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_AccelCalibrated_t *accel)
+{
+    MPU6050_Accel_t raw;
+
+    if (MPU6050_ReadAccelRaw(hi2c, &raw) != HAL_OK)
+    {
+        return HAL_ERROR;
+    }
+
+    accel->x =
+        ((float)raw.x - 678.0f) / 16237.5f;
+
+    accel->y =
+        ((float)raw.y - (-223.0f)) / 16332.7f;
+
+    accel->z =
+        ((float)raw.z - (-1284.0f)) / 16420.5f;
+
+    return HAL_OK;
+}
+
 
 HAL_StatusTypeDef MPU6050_ReadGyro(I2C_HandleTypeDef *hi2c,
                                    MPU6050_Gyro_t *gyro)

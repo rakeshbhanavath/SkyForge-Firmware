@@ -23,6 +23,16 @@ typedef struct
     float temperature;
 } MPU6050_Temp_t;
 
+/*=========================================================
+ * Calibrated Accelerometer Data
+ *=========================================================*/
+typedef struct
+{
+    float x;
+    float y;
+    float z;
+
+} MPU6050_AccelCalibrated_t;
 
 typedef struct
 {

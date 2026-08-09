@@ -29,6 +29,7 @@
 #include "mpu6050.h"
 
 #include <stdio.h>
+#include <math.h>
 
 extern I2C_HandleTypeDef hi2c1;
 extern UART_HandleTypeDef huart2;
@@ -2665,7 +2666,7 @@ void APP_Test_MPU6050(void)
                                                                  *
                                                                  *===========================================================================*/
 
-                                                                #if 1
+                                                                #if 0
 
                                                                     MPU6050_FIFOPacket_t packet;
 
@@ -3099,6 +3100,2055 @@ void APP_Test_MPU6050(void)
                                                                     }
 
                                                                 #endif
+
+
+
+                                                                    /*==============================================================================
+                                                                     * TEST 7.13 : Gyroscope Bias Calibration
+                                                                     *==============================================================================
+                                                                     *
+                                                                     * Objective
+                                                                     * ---------
+                                                                     * Measure the MPU6050 gyroscope zero-rate bias while the sensor is stationary.
+                                                                     *
+                                                                     * Calibration:
+                                                                     *
+                                                                     *     Bias = Sum(samples) / Number of samples
+                                                                     *
+                                                                     * Corrected value:
+                                                                     *
+                                                                     *     Corrected = Measured - Bias
+                                                                     *
+                                                                     * Configuration:
+                                                                     *
+                                                                     *     Gyroscope : ±250 dps
+                                                                     *     DLPF      : 94 Hz
+                                                                     *     Sample    : 100 Hz
+                                                                     *
+                                                                     * IMPORTANT:
+                                                                     * Keep the MPU6050 completely stationary during calibration.
+                                                                     *
+                                                                     *===========================================================================*/
+
+                                                                    #if 0
+
+                                                                        MPU6050_FIFOPacket_t packet;
+
+                                                                        uint16_t fifoCount;
+                                                                        uint8_t intStatus;
+
+                                                                        uint32_t sampleCount = 0U;
+
+                                                                        int64_t gyroSumX = 0;
+                                                                        int64_t gyroSumY = 0;
+                                                                        int64_t gyroSumZ = 0;
+
+                                                                        int32_t gyroBiasX;
+                                                                        int32_t gyroBiasY;
+                                                                        int32_t gyroBiasZ;
+
+                                                                        float gyroBiasXdps;
+                                                                        float gyroBiasYdps;
+                                                                        float gyroBiasZdps;
+
+                                                                        float gyroXdps;
+                                                                        float gyroYdps;
+                                                                        float gyroZdps;
+
+                                                                        uint32_t lastPrintTime;
+
+                                                                        char message[128];
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Initialize MPU6050
+                                                                         *--------------------------------------------------------*/
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "\r\nInitializing MPU6050...\r\n");
+
+                                                                        if (MPU6050_Init(&hi2c1) != HAL_OK)
+                                                                        {
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "MPU6050 Initialization Failed\r\n");
+
+                                                                            while (1);
+                                                                        }
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "MPU6050 Initialization Successful\r\n");
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Configure Gyroscope Range
+                                                                         *
+                                                                         * ±250 dps
+                                                                         * 131 LSB/(dps)
+                                                                         *--------------------------------------------------------*/
+
+                                                                        if (MPU6050_SetGyroRange(&hi2c1,
+                                                                                                 MPU6050_GYRO_RANGE_250DPS) != HAL_OK)
+                                                                        {
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "Gyro Range Configuration Failed\r\n");
+
+                                                                            while (1);
+                                                                        }
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Configure DLPF
+                                                                         *--------------------------------------------------------*/
+
+                                                                        if (MPU6050_SetDLPF(&hi2c1,
+                                                                                            MPU6050_DLPF_BW_94HZ) != HAL_OK)
+                                                                        {
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "DLPF Configuration Failed\r\n");
+
+                                                                            while (1);
+                                                                        }
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Configure Sample Rate
+                                                                         *
+                                                                         * 1000 / (1 + 9) = 100 Hz
+                                                                         *--------------------------------------------------------*/
+
+                                                                        if (MPU6050_SetSampleRateDivider(&hi2c1,
+                                                                                                         9U) != HAL_OK)
+                                                                        {
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "Sample Rate Configuration Failed\r\n");
+
+                                                                            while (1);
+                                                                        }
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Enable FIFO
+                                                                         *--------------------------------------------------------*/
+
+                                                                        if (MPU6050_EnableFIFO(&hi2c1) != HAL_OK)
+                                                                        {
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "FIFO Enable Failed\r\n");
+
+                                                                            while (1);
+                                                                        }
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Enable Gyroscope FIFO Sources
+                                                                         *--------------------------------------------------------*/
+
+                                                                        if (MPU6050_EnableGyroXFIFO(&hi2c1) != HAL_OK)
+                                                                        {
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "Gyro X FIFO Enable Failed\r\n");
+
+                                                                            while (1);
+                                                                        }
+
+                                                                        if (MPU6050_EnableGyroYFIFO(&hi2c1) != HAL_OK)
+                                                                        {
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "Gyro Y FIFO Enable Failed\r\n");
+
+                                                                            while (1);
+                                                                        }
+
+                                                                        if (MPU6050_EnableGyroZFIFO(&hi2c1) != HAL_OK)
+                                                                        {
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "Gyro Z FIFO Enable Failed\r\n");
+
+                                                                            while (1);
+                                                                        }
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Reset FIFO
+                                                                         *--------------------------------------------------------*/
+
+                                                                        if (MPU6050_ResetFIFO(&hi2c1) != HAL_OK)
+                                                                        {
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "FIFO Reset Failed\r\n");
+
+                                                                            while (1);
+                                                                        }
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Allow sensor/FIFO to settle
+                                                                         *--------------------------------------------------------*/
+
+                                                                        HAL_Delay(100);
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Reset FIFO again before calibration
+                                                                         *--------------------------------------------------------*/
+
+                                                                        if (MPU6050_ResetFIFO(&hi2c1) != HAL_OK)
+                                                                        {
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "FIFO Reset Before Calibration Failed\r\n");
+
+                                                                            while (1);
+                                                                        }
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Calibration Warning
+                                                                         *--------------------------------------------------------*/
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "\r\n================================\r\n");
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "GYROSCOPE CALIBRATION\r\n");
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "KEEP SENSOR COMPLETELY STILL\r\n");
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "Collecting 1000 samples...\r\n");
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "================================\r\n");
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Collect 1000 Samples
+                                                                         *--------------------------------------------------------*/
+
+                                                                        while (sampleCount < 1000U)
+                                                                        {
+                                                                            /*-----------------------------------------------------
+                                                                             * Get FIFO Count
+                                                                             *----------------------------------------------------*/
+
+                                                                            if (MPU6050_GetFIFOCount(&hi2c1,
+                                                                                                     &fifoCount) != HAL_OK)
+                                                                            {
+                                                                                continue;
+                                                                            }
+
+
+                                                                            /*-----------------------------------------------------
+                                                                             * Check FIFO Overflow
+                                                                             *----------------------------------------------------*/
+
+                                                                            if (MPU6050_GetInterruptStatus(&hi2c1,
+                                                                                                           &intStatus) != HAL_OK)
+                                                                            {
+                                                                                continue;
+                                                                            }
+
+
+                                                                            if (intStatus & MPU6050_FIFO_OFLOW_INT_Msk)
+                                                                            {
+                                                                                /*
+                                                                                 * Calibration data would be invalid if samples
+                                                                                 * were lost. Restart calibration.
+                                                                                 */
+
+                                                                                gyroSumX = 0;
+                                                                                gyroSumY = 0;
+                                                                                gyroSumZ = 0;
+
+                                                                                sampleCount = 0U;
+
+                                                                                MPU6050_ResetFIFO(&hi2c1);
+
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "\r\nFIFO Overflow - Restarting Calibration\r\n");
+
+                                                                                continue;
+                                                                            }
+
+
+                                                                            /*-----------------------------------------------------
+                                                                             * Wait for Complete Packet
+                                                                             *----------------------------------------------------*/
+
+                                                                            if (fifoCount < 6U)
+                                                                            {
+                                                                                continue;
+                                                                            }
+
+
+                                                                            /*
+                                                                             * Only gyroscope X/Y/Z are enabled in FIFO.
+                                                                             *
+                                                                             * Therefore packet size is:
+                                                                             *
+                                                                             *     6 bytes
+                                                                             *
+                                                                             * However, MPU6050_ReadFIFOPacket() expects the
+                                                                             * complete 14-byte packet.
+                                                                             *
+                                                                             * So we cannot use it here.
+                                                                             */
+
+                                                                            {
+                                                                                uint8_t gyroBuffer[6];
+
+                                                                                if (MPU6050_ReadFIFOBuffer(&hi2c1,
+                                                                                                           gyroBuffer,
+                                                                                                           6U) != HAL_OK)
+                                                                                {
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                /*-------------------------------------------------
+                                                                                 * Convert FIFO bytes to signed 16-bit values
+                                                                                 *------------------------------------------------*/
+
+                                                                                int16_t gyroX =
+                                                                                    (int16_t)(((uint16_t)gyroBuffer[0] << 8) |
+                                                                                               gyroBuffer[1]);
+
+                                                                                int16_t gyroY =
+                                                                                    (int16_t)(((uint16_t)gyroBuffer[2] << 8) |
+                                                                                               gyroBuffer[3]);
+
+                                                                                int16_t gyroZ =
+                                                                                    (int16_t)(((uint16_t)gyroBuffer[4] << 8) |
+                                                                                               gyroBuffer[5]);
+
+
+                                                                                gyroSumX += gyroX;
+                                                                                gyroSumY += gyroY;
+                                                                                gyroSumZ += gyroZ;
+
+                                                                                sampleCount++;
+                                                                            }
+                                                                        }
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Calculate Bias
+                                                                         *--------------------------------------------------------*/
+
+                                                                        gyroBiasX = (int32_t)(gyroSumX / 1000);
+                                                                        gyroBiasY = (int32_t)(gyroSumY / 1000);
+                                                                        gyroBiasZ = (int32_t)(gyroSumZ / 1000);
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Convert Bias to Physical Units
+                                                                         *
+                                                                         * ±250 dps = 131 LSB/dps
+                                                                         *--------------------------------------------------------*/
+
+                                                                        gyroBiasXdps = (float)gyroBiasX / 131.0f;
+                                                                        gyroBiasYdps = (float)gyroBiasY / 131.0f;
+                                                                        gyroBiasZdps = (float)gyroBiasZ / 131.0f;
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Print Calibration Result
+                                                                         *--------------------------------------------------------*/
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "\r\n================================\r\n");
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "GYROSCOPE CALIBRATION COMPLETE\r\n");
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "================================\r\n");
+
+
+                                                                        sprintf(message,
+                                                                                "Samples : %lu\r\n\r\n",
+                                                                                sampleCount);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        sprintf(message,
+                                                                                "Bias X : %ld raw\r\n",
+                                                                                gyroBiasX);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        sprintf(message,
+                                                                                "Bias Y : %ld raw\r\n",
+                                                                                gyroBiasY);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        sprintf(message,
+                                                                                "Bias Z : %ld raw\r\n\r\n",
+                                                                                gyroBiasZ);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        sprintf(message,
+                                                                                "Bias X : %+.3f dps\r\n",
+                                                                                gyroBiasXdps);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        sprintf(message,
+                                                                                "Bias Y : %+.3f dps\r\n",
+                                                                                gyroBiasYdps);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        sprintf(message,
+                                                                                "Bias Z : %+.3f dps\r\n",
+                                                                                gyroBiasZdps);
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                message);
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Clear FIFO Before Corrected Data Test
+                                                                         *--------------------------------------------------------*/
+
+                                                                        MPU6050_ResetFIFO(&hi2c1);
+
+
+                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                "\r\nStarting Corrected Gyro Output...\r\n");
+
+
+                                                                        lastPrintTime = HAL_GetTick();
+
+
+                                                                        /*---------------------------------------------------------
+                                                                         * Enable Continuous Gyro FIFO Processing
+                                                                         *--------------------------------------------------------*/
+
+                                                                        while (1)
+                                                                        {
+                                                                            if (MPU6050_GetFIFOCount(&hi2c1,
+                                                                                                     &fifoCount) != HAL_OK)
+                                                                            {
+                                                                                continue;
+                                                                            }
+
+
+                                                                            if (MPU6050_GetInterruptStatus(&hi2c1,
+                                                                                                           &intStatus) != HAL_OK)
+                                                                            {
+                                                                                continue;
+                                                                            }
+
+
+                                                                            if (intStatus & MPU6050_FIFO_OFLOW_INT_Msk)
+                                                                            {
+                                                                                MPU6050_ResetFIFO(&hi2c1);
+
+                                                                                continue;
+                                                                            }
+
+
+                                                                            if (fifoCount < 6U)
+                                                                            {
+                                                                                continue;
+                                                                            }
+
+
+                                                                            {
+                                                                                uint8_t gyroBuffer[6];
+
+                                                                                if (MPU6050_ReadFIFOBuffer(&hi2c1,
+                                                                                                           gyroBuffer,
+                                                                                                           6U) != HAL_OK)
+                                                                                {
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                int16_t gyroX =
+                                                                                    (int16_t)(((uint16_t)gyroBuffer[0] << 8) |
+                                                                                               gyroBuffer[1]);
+
+                                                                                int16_t gyroY =
+                                                                                    (int16_t)(((uint16_t)gyroBuffer[2] << 8) |
+                                                                                               gyroBuffer[3]);
+
+                                                                                int16_t gyroZ =
+                                                                                    (int16_t)(((uint16_t)gyroBuffer[4] << 8) |
+                                                                                               gyroBuffer[5]);
+
+
+                                                                                /*---------------------------------------------
+                                                                                 * Remove Bias
+                                                                                 *--------------------------------------------*/
+
+                                                                                gyroXdps =
+                                                                                    ((float)gyroX - (float)gyroBiasX) / 131.0f;
+
+                                                                                gyroYdps =
+                                                                                    ((float)gyroY - (float)gyroBiasY) / 131.0f;
+
+                                                                                gyroZdps =
+                                                                                    ((float)gyroZ - (float)gyroBiasZ) / 131.0f;
+
+
+                                                                                /*---------------------------------------------
+                                                                                 * Print Every 100 ms
+                                                                                 *--------------------------------------------*/
+
+                                                                                if ((HAL_GetTick() - lastPrintTime) >= 100U)
+                                                                                {
+                                                                                    lastPrintTime = HAL_GetTick();
+
+
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            "\r\n--------------------------------\r\n");
+
+
+                                                                                    sprintf(message,
+                                                                                            "Corrected Gyro X : %+.3f dps\r\n",
+                                                                                            gyroXdps);
+
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            message);
+
+
+                                                                                    sprintf(message,
+                                                                                            "Corrected Gyro Y : %+.3f dps\r\n",
+                                                                                            gyroYdps);
+
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            message);
+
+
+                                                                                    sprintf(message,
+                                                                                            "Corrected Gyro Z : %+.3f dps\r\n",
+                                                                                            gyroZdps);
+
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            message);
+                                                                                }
+                                                                            }
+                                                                        }
+
+                                                                    #endif
+
+
+                                                                        /*==============================================================================
+                                                                         * TEST 7.13A : Gyroscope Calibration Integrity
+                                                                         *==============================================================================
+                                                                         *
+                                                                         * Objective
+                                                                         * ---------
+                                                                         * Verify that gyro calibration samples are valid and stable.
+                                                                         *
+                                                                         * FIFO Configuration
+                                                                         * -------------------
+                                                                         *
+                                                                         *     Gyro X : 2 bytes
+                                                                         *     Gyro Y : 2 bytes
+                                                                         *     Gyro Z : 2 bytes
+                                                                         *     ----------------
+                                                                         *     Total  : 6 bytes
+                                                                         *
+                                                                         * Calibration
+                                                                         * -----------
+                                                                         *
+                                                                         *     1000 samples
+                                                                         *
+                                                                         *     Bias = Sum(samples) / 1000
+                                                                         *
+                                                                         * The test also calculates:
+                                                                         *
+                                                                         *     Minimum
+                                                                         *     Maximum
+                                                                         *     Average
+                                                                         *
+                                                                         * This allows us to determine whether the FIFO data is stable
+                                                                         * before trusting the calculated bias.
+                                                                         *
+                                                                         * Configuration
+                                                                         * -------------
+                                                                         *
+                                                                         *     Gyroscope : ±250 dps
+                                                                         *     DLPF      : 94 Hz
+                                                                         *     Sample    : 100 Hz
+                                                                         *
+                                                                         * IMPORTANT:
+                                                                         * Keep the MPU6050 completely stationary during calibration.
+                                                                         *
+                                                                         *===========================================================================*/
+
+                                                                        #if 0
+
+                                                                            uint16_t fifoCount;
+                                                                            uint8_t intStatus;
+
+                                                                            uint8_t gyroBuffer[6];
+
+                                                                            uint32_t sampleCount = 0U;
+                                                                            uint32_t discardedSamples = 0U;
+
+                                                                            int64_t gyroSumX = 0;
+                                                                            int64_t gyroSumY = 0;
+                                                                            int64_t gyroSumZ = 0;
+
+                                                                            int16_t gyroMinX = INT16_MAX;
+                                                                            int16_t gyroMinY = INT16_MAX;
+                                                                            int16_t gyroMinZ = INT16_MAX;
+
+                                                                            int16_t gyroMaxX = INT16_MIN;
+                                                                            int16_t gyroMaxY = INT16_MIN;
+                                                                            int16_t gyroMaxZ = INT16_MIN;
+
+                                                                            int32_t gyroBiasX;
+                                                                            int32_t gyroBiasY;
+                                                                            int32_t gyroBiasZ;
+
+                                                                            float gyroBiasXdps;
+                                                                            float gyroBiasYdps;
+                                                                            float gyroBiasZdps;
+
+                                                                            float gyroXdps;
+                                                                            float gyroYdps;
+                                                                            float gyroZdps;
+
+                                                                            uint32_t lastPrintTime = 0U;
+
+                                                                            char message[128];
+
+
+                                                                            /*=========================================================
+                                                                             * Initialize MPU6050
+                                                                             *========================================================*/
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "\r\nInitializing MPU6050...\r\n");
+
+
+                                                                            if (MPU6050_Init(&hi2c1) != HAL_OK)
+                                                                            {
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "MPU6050 Initialization Failed\r\n");
+
+                                                                                while (1);
+                                                                            }
+
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "MPU6050 Initialization Successful\r\n");
+
+
+                                                                            /*=========================================================
+                                                                             * Configure Gyroscope Range
+                                                                             *
+                                                                             * ±250 dps
+                                                                             *
+                                                                             * Sensitivity:
+                                                                             *
+                                                                             * 131 LSB / dps
+                                                                             *=========================================================*/
+
+                                                                            if (MPU6050_SetGyroRange(&hi2c1,
+                                                                                                     MPU6050_GYRO_RANGE_250DPS) != HAL_OK)
+                                                                            {
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "Gyro Range Configuration Failed\r\n");
+
+                                                                                while (1);
+                                                                            }
+
+
+                                                                            /*=========================================================
+                                                                             * Configure DLPF
+                                                                             *=========================================================*/
+
+                                                                            if (MPU6050_SetDLPF(&hi2c1,
+                                                                                                MPU6050_DLPF_BW_94HZ) != HAL_OK)
+                                                                            {
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "DLPF Configuration Failed\r\n");
+
+                                                                                while (1);
+                                                                            }
+
+
+                                                                            /*=========================================================
+                                                                             * Configure Sample Rate
+                                                                             *
+                                                                             * Sample Rate =
+                                                                             *
+                                                                             * 1000 / (1 + SMPLRT_DIV)
+                                                                             *
+                                                                             * Divider = 9
+                                                                             *
+                                                                             * Sample Rate = 100 Hz
+                                                                             *=========================================================*/
+
+                                                                            if (MPU6050_SetSampleRateDivider(&hi2c1,
+                                                                                                             9U) != HAL_OK)
+                                                                            {
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "Sample Rate Configuration Failed\r\n");
+
+                                                                                while (1);
+                                                                            }
+
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "Sensor Configuration Successful\r\n");
+
+
+                                                                            /*=========================================================
+                                                                             * Enable FIFO
+                                                                             *=========================================================*/
+
+                                                                            if (MPU6050_EnableFIFO(&hi2c1) != HAL_OK)
+                                                                            {
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "FIFO Enable Failed\r\n");
+
+                                                                                while (1);
+                                                                            }
+
+
+                                                                            /*=========================================================
+                                                                             * Enable ONLY Gyroscope FIFO Sources
+                                                                             *=========================================================*/
+
+                                                                            if (MPU6050_EnableGyroXFIFO(&hi2c1) != HAL_OK)
+                                                                            {
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "Gyro X FIFO Enable Failed\r\n");
+
+                                                                                while (1);
+                                                                            }
+
+
+                                                                            if (MPU6050_EnableGyroYFIFO(&hi2c1) != HAL_OK)
+                                                                            {
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "Gyro Y FIFO Enable Failed\r\n");
+
+                                                                                while (1);
+                                                                            }
+
+
+                                                                            if (MPU6050_EnableGyroZFIFO(&hi2c1) != HAL_OK)
+                                                                            {
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "Gyro Z FIFO Enable Failed\r\n");
+
+                                                                                while (1);
+                                                                            }
+
+
+                                                                            /*=========================================================
+                                                                             * Reset FIFO AFTER configuring FIFO sources
+                                                                             *
+                                                                             * This guarantees that calibration starts from an empty
+                                                                             * FIFO containing only the selected gyro sources.
+                                                                             *=========================================================*/
+
+                                                                            if (MPU6050_ResetFIFO(&hi2c1) != HAL_OK)
+                                                                            {
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "FIFO Reset Failed\r\n");
+
+                                                                                while (1);
+                                                                            }
+
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "Gyroscope FIFO Ready\r\n");
+
+
+                                                                            /*=========================================================
+                                                                             * Allow FIFO to collect samples
+                                                                             *=========================================================*/
+
+                                                                            HAL_Delay(50);
+
+
+                                                                            /*=========================================================
+                                                                             * Discard First 10 Samples
+                                                                             *
+                                                                             * These samples are not used for calibration.
+                                                                             *=========================================================*/
+
+                                                                            discardedSamples = 0U;
+
+
+                                                                            while (discardedSamples < 10U)
+                                                                            {
+                                                                                /*-----------------------------------------------------
+                                                                                 * Read FIFO Count
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (MPU6050_GetFIFOCount(&hi2c1,
+                                                                                                         &fifoCount) != HAL_OK)
+                                                                                {
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Read Interrupt Status
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (MPU6050_GetInterruptStatus(&hi2c1,
+                                                                                                               &intStatus) != HAL_OK)
+                                                                                {
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Check FIFO Overflow
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (intStatus & MPU6050_FIFO_OFLOW_INT_Msk)
+                                                                                {
+                                                                                    MPU6050_ResetFIFO(&hi2c1);
+
+                                                                                    discardedSamples = 0U;
+
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * One gyro sample = 6 bytes
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (fifoCount < 6U)
+                                                                                {
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Read one gyro sample
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (MPU6050_ReadFIFOBuffer(&hi2c1,
+                                                                                                           gyroBuffer,
+                                                                                                           6U) != HAL_OK)
+                                                                                {
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                discardedSamples++;
+                                                                            }
+
+
+                                                                            /*=========================================================
+                                                                             * Final FIFO Reset
+                                                                             *
+                                                                             * Calibration starts from an empty FIFO.
+                                                                             *=========================================================*/
+
+                                                                            if (MPU6050_ResetFIFO(&hi2c1) != HAL_OK)
+                                                                            {
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "Calibration FIFO Reset Failed\r\n");
+
+                                                                                while (1);
+                                                                            }
+
+
+                                                                            /*=========================================================
+                                                                             * Calibration Message
+                                                                             *=========================================================*/
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "\r\n================================\r\n");
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "GYRO CALIBRATION INTEGRITY TEST\r\n");
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "KEEP SENSOR COMPLETELY STILL\r\n");
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "Collecting 1000 samples...\r\n");
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "================================\r\n");
+
+
+                                                                            /*=========================================================
+                                                                             * Collect 1000 Samples
+                                                                             *=========================================================*/
+
+                                                                            while (sampleCount < 1000U)
+                                                                            {
+                                                                                /*-----------------------------------------------------
+                                                                                 * Read FIFO Count
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (MPU6050_GetFIFOCount(&hi2c1,
+                                                                                                         &fifoCount) != HAL_OK)
+                                                                                {
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Read Interrupt Status
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (MPU6050_GetInterruptStatus(&hi2c1,
+                                                                                                               &intStatus) != HAL_OK)
+                                                                                {
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * FIFO Overflow
+                                                                                 *
+                                                                                 * If overflow happens, the calibration is invalid.
+                                                                                 * Restart the complete calibration process.
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (intStatus & MPU6050_FIFO_OFLOW_INT_Msk)
+                                                                                {
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            "\r\nFIFO OVERFLOW\r\n");
+
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            "Restarting Calibration...\r\n");
+
+
+                                                                                    gyroSumX = 0;
+                                                                                    gyroSumY = 0;
+                                                                                    gyroSumZ = 0;
+
+                                                                                    gyroMinX = INT16_MAX;
+                                                                                    gyroMinY = INT16_MAX;
+                                                                                    gyroMinZ = INT16_MAX;
+
+                                                                                    gyroMaxX = INT16_MIN;
+                                                                                    gyroMaxY = INT16_MIN;
+                                                                                    gyroMaxZ = INT16_MIN;
+
+                                                                                    sampleCount = 0U;
+
+
+                                                                                    if (MPU6050_ResetFIFO(&hi2c1) != HAL_OK)
+                                                                                    {
+                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                "FIFO Reset Failed\r\n");
+
+                                                                                        while (1);
+                                                                                    }
+
+
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Wait for one complete gyro sample
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (fifoCount < 6U)
+                                                                                {
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Read 6-byte gyro sample
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (MPU6050_ReadFIFOBuffer(&hi2c1,
+                                                                                                           gyroBuffer,
+                                                                                                           6U) != HAL_OK)
+                                                                                {
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Decode Gyro X
+                                                                                 *
+                                                                                 * FIFO format:
+                                                                                 *
+                                                                                 * Byte 0 = MSB
+                                                                                 * Byte 1 = LSB
+                                                                                 *----------------------------------------------------*/
+
+                                                                                int16_t gyroX =
+                                                                                    (int16_t)(((uint16_t)gyroBuffer[0] << 8U) |
+                                                                                               gyroBuffer[1]);
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Decode Gyro Y
+                                                                                 *----------------------------------------------------*/
+
+                                                                                int16_t gyroY =
+                                                                                    (int16_t)(((uint16_t)gyroBuffer[2] << 8U) |
+                                                                                               gyroBuffer[3]);
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Decode Gyro Z
+                                                                                 *----------------------------------------------------*/
+
+                                                                                int16_t gyroZ =
+                                                                                    (int16_t)(((uint16_t)gyroBuffer[4] << 8U) |
+                                                                                               gyroBuffer[5]);
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Accumulate
+                                                                                 *----------------------------------------------------*/
+
+                                                                                gyroSumX += gyroX;
+                                                                                gyroSumY += gyroY;
+                                                                                gyroSumZ += gyroZ;
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Minimum
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (gyroX < gyroMinX)
+                                                                                {
+                                                                                    gyroMinX = gyroX;
+                                                                                }
+
+                                                                                if (gyroY < gyroMinY)
+                                                                                {
+                                                                                    gyroMinY = gyroY;
+                                                                                }
+
+                                                                                if (gyroZ < gyroMinZ)
+                                                                                {
+                                                                                    gyroMinZ = gyroZ;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Maximum
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (gyroX > gyroMaxX)
+                                                                                {
+                                                                                    gyroMaxX = gyroX;
+                                                                                }
+
+                                                                                if (gyroY > gyroMaxY)
+                                                                                {
+                                                                                    gyroMaxY = gyroY;
+                                                                                }
+
+                                                                                if (gyroZ > gyroMaxZ)
+                                                                                {
+                                                                                    gyroMaxZ = gyroZ;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Next sample
+                                                                                 *----------------------------------------------------*/
+
+                                                                                sampleCount++;
+                                                                            }
+
+
+                                                                            /*=========================================================
+                                                                             * Calculate Average Bias
+                                                                             *=========================================================*/
+
+                                                                            gyroBiasX = (int32_t)(gyroSumX / 1000LL);
+
+                                                                            gyroBiasY = (int32_t)(gyroSumY / 1000LL);
+
+                                                                            gyroBiasZ = (int32_t)(gyroSumZ / 1000LL);
+
+
+                                                                            /*=========================================================
+                                                                             * Convert Bias to °/s
+                                                                             *
+                                                                             * ±250 dps:
+                                                                             *
+                                                                             * 131 LSB / °/s
+                                                                             *=========================================================*/
+
+                                                                            gyroBiasXdps =
+                                                                                (float)gyroBiasX / 131.0f;
+
+                                                                            gyroBiasYdps =
+                                                                                (float)gyroBiasY / 131.0f;
+
+                                                                            gyroBiasZdps =
+                                                                                (float)gyroBiasZ / 131.0f;
+
+
+                                                                            /*=========================================================
+                                                                             * Print Calibration Statistics
+                                                                             *=========================================================*/
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "\r\n================================\r\n");
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "CALIBRATION RESULTS\r\n");
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "================================\r\n");
+
+
+                                                                            sprintf(message,
+                                                                                    "Samples : %lu\r\n\r\n",
+                                                                                    sampleCount);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            /*---------------------------------------------------------
+                                                                             * Gyro X
+                                                                             *--------------------------------------------------------*/
+
+                                                                            sprintf(message,
+                                                                                    "GX Average : %ld raw\r\n",
+                                                                                    gyroBiasX);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "GX Minimum : %d raw\r\n",
+                                                                                    gyroMinX);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "GX Maximum : %d raw\r\n\r\n",
+                                                                                    gyroMaxX);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            /*---------------------------------------------------------
+                                                                             * Gyro Y
+                                                                             *--------------------------------------------------------*/
+
+                                                                            sprintf(message,
+                                                                                    "GY Average : %ld raw\r\n",
+                                                                                    gyroBiasY);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "GY Minimum : %d raw\r\n",
+                                                                                    gyroMinY);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "GY Maximum : %d raw\r\n\r\n",
+                                                                                    gyroMaxY);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            /*---------------------------------------------------------
+                                                                             * Gyro Z
+                                                                             *--------------------------------------------------------*/
+
+                                                                            sprintf(message,
+                                                                                    "GZ Average : %ld raw\r\n",
+                                                                                    gyroBiasZ);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "GZ Minimum : %d raw\r\n",
+                                                                                    gyroMinZ);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "GZ Maximum : %d raw\r\n\r\n",
+                                                                                    gyroMaxZ);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            /*---------------------------------------------------------
+                                                                             * Bias in Physical Units
+                                                                             *--------------------------------------------------------*/
+
+                                                                            sprintf(message,
+                                                                                    "Bias X : %+.3f dps\r\n",
+                                                                                    gyroBiasXdps);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "Bias Y : %+.3f dps\r\n",
+                                                                                    gyroBiasYdps);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            sprintf(message,
+                                                                                    "Bias Z : %+.3f dps\r\n",
+                                                                                    gyroBiasZdps);
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    message);
+
+
+                                                                            /*=========================================================
+                                                                             * Reset FIFO Before Corrected Output
+                                                                             *=========================================================*/
+
+                                                                            if (MPU6050_ResetFIFO(&hi2c1) != HAL_OK)
+                                                                            {
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "FIFO Reset Before Corrected Output Failed\r\n");
+
+                                                                                while (1);
+                                                                            }
+
+
+                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                    "\r\nStarting Corrected Gyro Output...\r\n");
+
+
+                                                                            lastPrintTime = HAL_GetTick();
+
+
+                                                                            /*=========================================================
+                                                                             * Continuous Corrected Gyro Output
+                                                                             *=========================================================*/
+
+                                                                            while (1)
+                                                                            {
+                                                                                /*-----------------------------------------------------
+                                                                                 * FIFO Count
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (MPU6050_GetFIFOCount(&hi2c1,
+                                                                                                         &fifoCount) != HAL_OK)
+                                                                                {
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Interrupt Status
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (MPU6050_GetInterruptStatus(&hi2c1,
+                                                                                                               &intStatus) != HAL_OK)
+                                                                                {
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Overflow
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (intStatus & MPU6050_FIFO_OFLOW_INT_Msk)
+                                                                                {
+                                                                                    if (MPU6050_ResetFIFO(&hi2c1) != HAL_OK)
+                                                                                    {
+                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                "FIFO Reset Failed\r\n");
+
+                                                                                        while (1);
+                                                                                    }
+
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Wait for Complete Gyro Sample
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (fifoCount < 6U)
+                                                                                {
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Read Gyro Sample
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if (MPU6050_ReadFIFOBuffer(&hi2c1,
+                                                                                                           gyroBuffer,
+                                                                                                           6U) != HAL_OK)
+                                                                                {
+                                                                                    continue;
+                                                                                }
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Decode
+                                                                                 *----------------------------------------------------*/
+
+                                                                                int16_t gyroX =
+                                                                                    (int16_t)(((uint16_t)gyroBuffer[0] << 8U) |
+                                                                                               gyroBuffer[1]);
+
+
+                                                                                int16_t gyroY =
+                                                                                    (int16_t)(((uint16_t)gyroBuffer[2] << 8U) |
+                                                                                               gyroBuffer[3]);
+
+
+                                                                                int16_t gyroZ =
+                                                                                    (int16_t)(((uint16_t)gyroBuffer[4] << 8U) |
+                                                                                               gyroBuffer[5]);
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Remove Bias and Convert to °/s
+                                                                                 *----------------------------------------------------*/
+
+                                                                                gyroXdps =
+                                                                                    ((float)gyroX - (float)gyroBiasX) / 131.0f;
+
+
+                                                                                gyroYdps =
+                                                                                    ((float)gyroY - (float)gyroBiasY) / 131.0f;
+
+
+                                                                                gyroZdps =
+                                                                                    ((float)gyroZ - (float)gyroBiasZ) / 131.0f;
+
+
+                                                                                /*-----------------------------------------------------
+                                                                                 * Print Every 100 ms
+                                                                                 *----------------------------------------------------*/
+
+                                                                                if ((HAL_GetTick() - lastPrintTime) >= 100U)
+                                                                                {
+                                                                                    lastPrintTime = HAL_GetTick();
+
+
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            "\r\n--------------------------------\r\n");
+
+
+                                                                                    sprintf(message,
+                                                                                            "Corrected Gyro X : %+.3f dps\r\n",
+                                                                                            gyroXdps);
+
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            message);
+
+
+                                                                                    sprintf(message,
+                                                                                            "Corrected Gyro Y : %+.3f dps\r\n",
+                                                                                            gyroYdps);
+
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            message);
+
+
+                                                                                    sprintf(message,
+                                                                                            "Corrected Gyro Z : %+.3f dps\r\n",
+                                                                                            gyroZdps);
+
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            message);
+                                                                                }
+                                                                            }
+
+                                                                        #endif
+
+
+
+
+                                                                            /*==============================================================================
+                                                                             * TEST 7.14A : Accelerometer Orientation Measurement
+                                                                             *==============================================================================
+                                                                             *
+                                                                             * Objective
+                                                                             * ---------
+                                                                             * Measure the average accelerometer output in six known orientations.
+                                                                             *
+                                                                             * Positions:
+                                                                             *
+                                                                             *     +X UP
+                                                                             *     -X UP
+                                                                             *     +Y UP
+                                                                             *     -Y UP
+                                                                             *     +Z UP
+                                                                             *     -Z UP
+                                                                             *
+                                                                             * Each position:
+                                                                             *
+                                                                             *     200 samples
+                                                                             *
+                                                                             * Settling time:
+                                                                             *
+                                                                             *     5 seconds
+                                                                             *
+                                                                             * Configuration:
+                                                                             *
+                                                                             *     Accelerometer : ±2 g
+                                                                             *
+                                                                             * IMPORTANT:
+                                                                             * Keep the sensor completely stationary while samples are collected.
+                                                                             *
+                                                                             *===========================================================================*/
+
+                                                                            #if 0
+
+                                                                                MPU6050_Accel_t accel;
+
+                                                                                int64_t sumX;
+                                                                                int64_t sumY;
+                                                                                int64_t sumZ;
+
+                                                                                int32_t avgX;
+                                                                                int32_t avgY;
+                                                                                int32_t avgZ;
+
+                                                                                uint32_t sampleCount;
+
+                                                                                char message[128];
+
+
+                                                                                /*---------------------------------------------------------
+                                                                                 * Initialize MPU6050
+                                                                                 *--------------------------------------------------------*/
+
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "\r\nInitializing MPU6050...\r\n");
+
+
+                                                                                if (MPU6050_Init(&hi2c1) != HAL_OK)
+                                                                                {
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            "MPU6050 Initialization Failed\r\n");
+
+                                                                                    while (1);
+                                                                                }
+
+
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "MPU6050 Initialization Successful\r\n");
+
+
+                                                                                /*---------------------------------------------------------
+                                                                                 * Configure Accelerometer Range
+                                                                                 *
+                                                                                 * ±2 g
+                                                                                 *
+                                                                                 * 16384 LSB/g
+                                                                                 *--------------------------------------------------------*/
+
+                                                                                if (MPU6050_SetAccelRange(&hi2c1,
+                                                                                                          MPU6050_ACCEL_RANGE_2G) != HAL_OK)
+                                                                                {
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            "Accel Range Configuration Failed\r\n");
+
+                                                                                    while (1);
+                                                                                }
+
+
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "Accelerometer configured for ±2 g\r\n");
+
+
+                                                                                /*---------------------------------------------------------
+                                                                                 * Allow sensor to settle after initialization
+                                                                                 *--------------------------------------------------------*/
+
+                                                                                HAL_Delay(500);
+
+
+                                                                                /*=========================================================
+                                                                                 * Helper Macro
+                                                                                 *
+                                                                                 * Collect 200 accelerometer samples and calculate average.
+                                                                                 *=========================================================*/
+
+                                                                            #define MEASURE_ACCEL_ORIENTATION(POSITION_NAME)                 \
+                                                                                                                                             \
+                                                                                do                                                           \
+                                                                                {                                                            \
+                                                                                    sumX = 0;                                                \
+                                                                                    sumY = 0;                                                \
+                                                                                    sumZ = 0;                                                \
+                                                                                    sampleCount = 0;                                        \
+                                                                                                                                             \
+                                                                                    BSP_UART_TransmitString(&huart2,                         \
+                                                                                                            "\r\nPlace sensor: "              \
+                                                                                                            POSITION_NAME "\r\n");            \
+                                                                                                                                             \
+                                                                                    BSP_UART_TransmitString(&huart2,                         \
+                                                                                                            "Waiting 5 seconds...\r\n");      \
+                                                                                                                                             \
+                                                                                    HAL_Delay(5000);                                         \
+                                                                                                                                             \
+                                                                                    BSP_UART_TransmitString(&huart2,                         \
+                                                                                                            "Collecting 200 samples...\r\n");\
+                                                                                                                                             \
+                                                                                    while (sampleCount < 200U)                               \
+                                                                                    {                                                        \
+                                                                                        if (MPU6050_ReadAccel(&hi2c1,                        \
+                                                                                                              &accel) != HAL_OK)              \
+                                                                                        {                                                    \
+                                                                                            continue;                                        \
+                                                                                        }                                                    \
+                                                                                                                                             \
+                                                                                        sumX += accel.x;                                     \
+                                                                                        sumY += accel.y;                                     \
+                                                                                        sumZ += accel.z;                                     \
+                                                                                                                                             \
+                                                                                        sampleCount++;                                       \
+                                                                                                                                             \
+                                                                                        HAL_Delay(10);                                       \
+                                                                                    }                                                        \
+                                                                                                                                             \
+                                                                                    avgX = (int32_t)(sumX / 200LL);                           \
+                                                                                    avgY = (int32_t)(sumY / 200LL);                           \
+                                                                                    avgZ = (int32_t)(sumZ / 200LL);                           \
+                                                                                                                                             \
+                                                                                    BSP_UART_TransmitString(&huart2,                         \
+                                                                                                            "\r\nResult:\r\n");               \
+                                                                                                                                             \
+                                                                                    sprintf(message,                                         \
+                                                                                            "Accel X : %ld raw\r\n",                         \
+                                                                                            avgX);                                           \
+                                                                                                                                             \
+                                                                                    BSP_UART_TransmitString(&huart2,                         \
+                                                                                                            message);                        \
+                                                                                                                                             \
+                                                                                    sprintf(message,                                         \
+                                                                                            "Accel Y : %ld raw\r\n",                         \
+                                                                                            avgY);                                           \
+                                                                                                                                             \
+                                                                                    BSP_UART_TransmitString(&huart2,                         \
+                                                                                                            message);                        \
+                                                                                                                                             \
+                                                                                    sprintf(message,                                         \
+                                                                                            "Accel Z : %ld raw\r\n",                         \
+                                                                                            avgZ);                                           \
+                                                                                                                                             \
+                                                                                    BSP_UART_TransmitString(&huart2,                         \
+                                                                                                            message);                        \
+                                                                                                                                             \
+                                                                                } while (0)
+
+
+                                                                                /*=========================================================
+                                                                                 * +X UP
+                                                                                 *=========================================================*/
+
+                                                                                MEASURE_ACCEL_ORIENTATION("+X UP");
+
+
+                                                                                /*=========================================================
+                                                                                 * -X UP
+                                                                                 *=========================================================*/
+
+                                                                                MEASURE_ACCEL_ORIENTATION("-X UP");
+
+
+                                                                                /*=========================================================
+                                                                                 * +Y UP
+                                                                                 *=========================================================*/
+
+                                                                                MEASURE_ACCEL_ORIENTATION("+Y UP");
+
+
+                                                                                /*=========================================================
+                                                                                 * -Y UP
+                                                                                 *=========================================================*/
+
+                                                                                MEASURE_ACCEL_ORIENTATION("-Y UP");
+
+
+                                                                                /*=========================================================
+                                                                                 * +Z UP
+                                                                                 *=========================================================*/
+
+                                                                                MEASURE_ACCEL_ORIENTATION("+Z UP");
+
+
+                                                                                /*=========================================================
+                                                                                 * -Z UP
+                                                                                 *=========================================================*/
+
+                                                                                MEASURE_ACCEL_ORIENTATION("-Z UP");
+
+
+                                                                                /*=========================================================
+                                                                                 * End Test
+                                                                                 *=========================================================*/
+
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "\r\n================================\r\n");
+
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "ACCELEROMETER MEASUREMENT COMPLETE\r\n");
+
+                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                        "================================\r\n");
+
+
+                                                                            #undef MEASURE_ACCEL_ORIENTATION
+
+
+                                                                                while (1)
+                                                                                {
+                                                                                    HAL_Delay(1000);
+                                                                                }
+
+                                                                            #endif
+
+
+
+
+                                                                                /*==============================================================================
+                                                                                 * TEST 7.14B : Accelerometer Calibration Validation
+                                                                                 *==============================================================================
+                                                                                 *
+                                                                                 * Objective
+                                                                                 * ---------
+                                                                                 * Validate accelerometer offset and scale calibration using six stationary
+                                                                                 * orientations.
+                                                                                 *
+                                                                                 * Calibration values obtained from multiple stationary iterations:
+                                                                                 *
+                                                                                 *     Offset X = +678 raw
+                                                                                 *     Offset Y = -223 raw
+                                                                                 *     Offset Z = -1284 raw
+                                                                                 *
+                                                                                 *     Scale X = 16237.5 raw/g
+                                                                                 *     Scale Y = 16332.7 raw/g
+                                                                                 *     Scale Z = 16420.5 raw/g
+                                                                                 *
+                                                                                 * The calibration is NOT written into the MPU6050 driver.
+                                                                                 *
+                                                                                 * Each orientation:
+                                                                                 *
+                                                                                 *     5 seconds settling
+                                                                                 *     200 samples
+                                                                                 *
+                                                                                 *===========================================================================*/
+
+                                                                                #if 0
+
+                                                                                    MPU6050_Accel_t accel;
+
+                                                                                    int64_t sumX;
+                                                                                    int64_t sumY;
+                                                                                    int64_t sumZ;
+
+                                                                                    int32_t avgX;
+                                                                                    int32_t avgY;
+                                                                                    int32_t avgZ;
+
+                                                                                    float correctedX;
+                                                                                    float correctedY;
+                                                                                    float correctedZ;
+
+                                                                                    float magnitude;
+
+                                                                                    uint32_t sampleCount;
+
+                                                                                    char message[160];
+
+
+                                                                                    /*---------------------------------------------------------
+                                                                                     * Calibration Constants
+                                                                                     *--------------------------------------------------------*/
+
+                                                                                    const float ACCEL_OFFSET_X = 678.0f;
+                                                                                    const float ACCEL_OFFSET_Y = -223.0f;
+                                                                                    const float ACCEL_OFFSET_Z = -1284.0f;
+
+                                                                                    const float ACCEL_SCALE_X = 16237.5f;
+                                                                                    const float ACCEL_SCALE_Y = 16332.7f;
+                                                                                    const float ACCEL_SCALE_Z = 16420.5f;
+
+
+                                                                                    /*---------------------------------------------------------
+                                                                                     * Initialize MPU6050
+                                                                                     *--------------------------------------------------------*/
+
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            "\r\nInitializing MPU6050...\r\n");
+
+
+                                                                                    if (MPU6050_Init(&hi2c1) != HAL_OK)
+                                                                                    {
+                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                "MPU6050 Initialization Failed\r\n");
+
+                                                                                        while (1);
+                                                                                    }
+
+
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            "MPU6050 Initialization Successful\r\n");
+
+
+                                                                                    /*---------------------------------------------------------
+                                                                                     * Configure Accelerometer Range
+                                                                                     *--------------------------------------------------------*/
+
+                                                                                    if (MPU6050_SetAccelRange(&hi2c1,
+                                                                                                              MPU6050_ACCEL_RANGE_2G) != HAL_OK)
+                                                                                    {
+                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                "Accel Range Configuration Failed\r\n");
+
+                                                                                        while (1);
+                                                                                    }
+
+
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            "Accelerometer configured for ±2 g\r\n");
+
+
+                                                                                    HAL_Delay(500);
+
+
+                                                                                    /*=========================================================
+                                                                                     * Measurement Macro
+                                                                                     *=========================================================*/
+
+                                                                                #define VALIDATE_ACCEL_ORIENTATION(POSITION_NAME)                  \
+                                                                                                                                                  \
+                                                                                    do                                                            \
+                                                                                    {                                                             \
+                                                                                        sumX = 0;                                                 \
+                                                                                        sumY = 0;                                                 \
+                                                                                        sumZ = 0;                                                 \
+                                                                                        sampleCount = 0;                                         \
+                                                                                                                                                  \
+                                                                                        BSP_UART_TransmitString(&huart2,                          \
+                                                                                                                "\r\n==============================\r\n"); \
+                                                                                                                                                  \
+                                                                                        BSP_UART_TransmitString(&huart2,                          \
+                                                                                                                POSITION_NAME "\r\n");            \
+                                                                                                                                                  \
+                                                                                        BSP_UART_TransmitString(&huart2,                          \
+                                                                                                                "Waiting 5 seconds...\r\n");       \
+                                                                                                                                                  \
+                                                                                        HAL_Delay(5000);                                          \
+                                                                                                                                                  \
+                                                                                        BSP_UART_TransmitString(&huart2,                          \
+                                                                                                                "Collecting 200 samples...\r\n"); \
+                                                                                                                                                  \
+                                                                                        while (sampleCount < 200U)                                \
+                                                                                        {                                                         \
+                                                                                            if (MPU6050_ReadAccel(&hi2c1,                         \
+                                                                                                                  &accel) != HAL_OK)               \
+                                                                                            {                                                     \
+                                                                                                continue;                                         \
+                                                                                            }                                                     \
+                                                                                                                                                  \
+                                                                                            sumX += accel.x;                                      \
+                                                                                            sumY += accel.y;                                      \
+                                                                                            sumZ += accel.z;                                      \
+                                                                                                                                                  \
+                                                                                            sampleCount++;                                        \
+                                                                                                                                                  \
+                                                                                            HAL_Delay(10);                                        \
+                                                                                        }                                                         \
+                                                                                                                                                  \
+                                                                                        avgX = (int32_t)(sumX / 200LL);                            \
+                                                                                        avgY = (int32_t)(sumY / 200LL);                            \
+                                                                                        avgZ = (int32_t)(sumZ / 200LL);                            \
+                                                                                                                                                  \
+                                                                                        /*----------------------------------------------------- \
+                                                                                         * Apply offset and scale calibration                   \
+                                                                                         *-----------------------------------------------------*/ \
+                                                                                                                                                  \
+                                                                                        correctedX =                                             \
+                                                                                            ((float)avgX - ACCEL_OFFSET_X) / ACCEL_SCALE_X;       \
+                                                                                                                                                  \
+                                                                                        correctedY =                                             \
+                                                                                            ((float)avgY - ACCEL_OFFSET_Y) / ACCEL_SCALE_Y;       \
+                                                                                                                                                  \
+                                                                                        correctedZ =                                             \
+                                                                                            ((float)avgZ - ACCEL_OFFSET_Z) / ACCEL_SCALE_Z;       \
+                                                                                                                                                  \
+                                                                                        /*----------------------------------------------------- \
+                                                                                         * Calculate total acceleration magnitude                \
+                                                                                         *-----------------------------------------------------*/ \
+                                                                                                                                                  \
+                                                                                        magnitude = sqrtf(                                         \
+                                                                                            correctedX * correctedX +                             \
+                                                                                            correctedY * correctedY +                             \
+                                                                                            correctedZ * correctedZ);                             \
+                                                                                                                                                  \
+                                                                                        /*----------------------------------------------------- \
+                                                                                         * Raw values                                             \
+                                                                                         *-----------------------------------------------------*/ \
+                                                                                                                                                  \
+                                                                                        BSP_UART_TransmitString(&huart2,                          \
+                                                                                                                "\r\nRAW:\r\n");                   \
+                                                                                                                                                  \
+                                                                                        sprintf(message,                                          \
+                                                                                                "Accel X : %ld raw\r\n",                          \
+                                                                                                avgX);                                            \
+                                                                                        BSP_UART_TransmitString(&huart2, message);                \
+                                                                                                                                                  \
+                                                                                        sprintf(message,                                          \
+                                                                                                "Accel Y : %ld raw\r\n",                          \
+                                                                                                avgY);                                            \
+                                                                                        BSP_UART_TransmitString(&huart2, message);                \
+                                                                                                                                                  \
+                                                                                        sprintf(message,                                          \
+                                                                                                "Accel Z : %ld raw\r\n",                          \
+                                                                                                avgZ);                                            \
+                                                                                        BSP_UART_TransmitString(&huart2, message);                \
+                                                                                                                                                  \
+                                                                                        /*----------------------------------------------------- \
+                                                                                         * Corrected values                                      \
+                                                                                         *-----------------------------------------------------*/ \
+                                                                                                                                                  \
+                                                                                        BSP_UART_TransmitString(&huart2,                          \
+                                                                                                                "\r\nCORRECTED:\r\n");             \
+                                                                                                                                                  \
+                                                                                        sprintf(message,                                          \
+                                                                                                "Accel X : %+0.4f g\r\n",                         \
+                                                                                                correctedX);                                      \
+                                                                                        BSP_UART_TransmitString(&huart2, message);                \
+                                                                                                                                                  \
+                                                                                        sprintf(message,                                          \
+                                                                                                "Accel Y : %+0.4f g\r\n",                         \
+                                                                                                correctedY);                                      \
+                                                                                        BSP_UART_TransmitString(&huart2, message);                \
+                                                                                                                                                  \
+                                                                                        sprintf(message,                                          \
+                                                                                                "Accel Z : %+0.4f g\r\n",                         \
+                                                                                                correctedZ);                                      \
+                                                                                        BSP_UART_TransmitString(&huart2, message);                \
+                                                                                                                                                  \
+                                                                                        sprintf(message,                                          \
+                                                                                                "\r\nMagnitude : %.4f g\r\n",                    \
+                                                                                                magnitude);                                       \
+                                                                                        BSP_UART_TransmitString(&huart2, message);                \
+                                                                                                                                                  \
+                                                                                    } while (0)
+
+
+                                                                                    /*=========================================================
+                                                                                     * +X UP
+                                                                                     *=========================================================*/
+
+                                                                                    VALIDATE_ACCEL_ORIENTATION("+X UP");
+
+
+                                                                                    /*=========================================================
+                                                                                     * -X UP
+                                                                                     *=========================================================*/
+
+                                                                                    VALIDATE_ACCEL_ORIENTATION("-X UP");
+
+
+                                                                                    /*=========================================================
+                                                                                     * +Y UP
+                                                                                     *=========================================================*/
+
+                                                                                    VALIDATE_ACCEL_ORIENTATION("+Y UP");
+
+
+                                                                                    /*=========================================================
+                                                                                     * -Y UP
+                                                                                     *=========================================================*/
+
+                                                                                    VALIDATE_ACCEL_ORIENTATION("-Y UP");
+
+
+                                                                                    /*=========================================================
+                                                                                     * +Z UP
+                                                                                     *=========================================================*/
+
+                                                                                    VALIDATE_ACCEL_ORIENTATION("+Z UP");
+
+
+                                                                                    /*=========================================================
+                                                                                     * -Z UP
+                                                                                     *=========================================================*/
+
+                                                                                    VALIDATE_ACCEL_ORIENTATION("-Z UP");
+
+
+                                                                                    /*=========================================================
+                                                                                     * Test Complete
+                                                                                     *=========================================================*/
+
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            "\r\n========================================\r\n");
+
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            "ACCELEROMETER CALIBRATION VALIDATION COMPLETE\r\n");
+
+                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                            "========================================\r\n");
+
+
+                                                                                #undef VALIDATE_ACCEL_ORIENTATION
+
+
+                                                                                    while (1)
+                                                                                    {
+                                                                                        HAL_Delay(1000);
+                                                                                    }
+
+                                                                                #endif
+                                                                                    /*==============================================================================
+                                                                                     * TEST 7.15 : Calibrated Accelerometer Read
+                                                                                     *==============================================================================
+                                                                                     *
+                                                                                     * Objective
+                                                                                     * ---------
+                                                                                     * Verify that MPU6050_ReadAccelCalibrated() returns accelerometer data
+                                                                                     * in g after applying the provisional calibration.
+                                                                                     *
+                                                                                     *===========================================================================*/
+
+                                                                                    #if 1
+
+                                                                                        MPU6050_AccelCalibrated_t accel;
+
+                                                                                        char message[128];
+
+
+                                                                                        /*---------------------------------------------------------
+                                                                                         * Initialize MPU6050
+                                                                                         *--------------------------------------------------------*/
+
+                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                "\r\nInitializing MPU6050...\r\n");
+
+                                                                                        if (MPU6050_Init(&hi2c1) != HAL_OK)
+                                                                                        {
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    "MPU6050 Initialization Failed\r\n");
+
+                                                                                            while (1);
+                                                                                        }
+
+                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                "MPU6050 Initialization Successful\r\n");
+
+
+                                                                                        /*---------------------------------------------------------
+                                                                                         * Configure Accelerometer
+                                                                                         *
+                                                                                         * ±2 g
+                                                                                         *--------------------------------------------------------*/
+
+                                                                                        if (MPU6050_SetAccelRange(&hi2c1,
+                                                                                                                  MPU6050_ACCEL_RANGE_2G) != HAL_OK)
+                                                                                        {
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    "Accel Range Configuration Failed\r\n");
+
+                                                                                            while (1);
+                                                                                        }
+
+                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                "Accelerometer configured for ±2 g\r\n");
+
+
+                                                                                        HAL_Delay(1000);
+
+
+                                                                                        /*---------------------------------------------------------
+                                                                                         * Continuous calibrated accelerometer read
+                                                                                         *--------------------------------------------------------*/
+
+                                                                                        while (1)
+                                                                                        {
+                                                                                            if (MPU6050_ReadAccelCalibrated(&hi2c1,
+                                                                                                                            &accel) != HAL_OK)
+                                                                                            {
+                                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                                        "Calibrated Accel Read Failed\r\n");
+
+                                                                                                HAL_Delay(500);
+
+                                                                                                continue;
+                                                                                            }
+
+
+                                                                                            sprintf(message,
+                                                                                                    "\r\nAccel X : %+0.4f g\r\n",
+                                                                                                    accel.x);
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    message);
+
+
+                                                                                            sprintf(message,
+                                                                                                    "Accel Y : %+0.4f g\r\n",
+                                                                                                    accel.y);
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    message);
+
+
+                                                                                            sprintf(message,
+                                                                                                    "Accel Z : %+0.4f g\r\n",
+                                                                                                    accel.z);
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    message);
+
+
+                                                                                            HAL_Delay(500);
+                                                                                        }
+
+                                                                                    #endif
+
 
 
 
