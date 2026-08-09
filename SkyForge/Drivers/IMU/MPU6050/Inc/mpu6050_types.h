@@ -17,6 +17,22 @@ typedef struct
     int16_t z;
 } MPU6050_Gyro_t;
 
+
+/*=========================================================
+ * Calibrated Gyroscope Data
+ *
+ * Units:
+ *     X, Y, Z = degrees per second (°/s)
+ *=========================================================*/
+
+typedef struct
+{
+    float x;
+    float y;
+    float z;
+
+} MPU6050_GyroCalibrated_t;
+
 typedef struct
 {
     int16_t raw;

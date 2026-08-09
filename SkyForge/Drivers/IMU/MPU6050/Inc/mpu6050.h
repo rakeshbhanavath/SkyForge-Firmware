@@ -320,6 +320,21 @@ HAL_StatusTypeDef MPU6050_ReadAccelCalibrated(
 HAL_StatusTypeDef MPU6050_ReadGyro(I2C_HandleTypeDef *hi2c,
                                    MPU6050_Gyro_t *gyro);
 
+
+/**
+ * @brief Read raw gyroscope data.
+ */
+HAL_StatusTypeDef MPU6050_ReadGyroRaw(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_Gyro_t *gyro);
+
+/**
+ * @brief Read calibrated gyroscope data in °/s.
+ */
+HAL_StatusTypeDef MPU6050_ReadGyroCalibrated(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_GyroCalibrated_t *gyro);
+
 HAL_StatusTypeDef MPU6050_ReadTemperature(I2C_HandleTypeDef *hi2c,
                                           MPU6050_Temp_t *temp);
 

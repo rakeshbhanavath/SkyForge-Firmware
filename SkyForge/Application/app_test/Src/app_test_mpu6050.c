@@ -5054,7 +5054,7 @@ void APP_Test_MPU6050(void)
                                                                                      *
                                                                                      *===========================================================================*/
 
-                                                                                    #if 1
+                                                                                    #if 0
 
                                                                                         MPU6050_AccelCalibrated_t accel;
 
@@ -5148,6 +5148,367 @@ void APP_Test_MPU6050(void)
                                                                                         }
 
                                                                                     #endif
+
+
+                                                                                        /*==============================================================================
+                                                                                         * TEST 7.16 : Gyroscope Raw Bias Measurement
+                                                                                         *==============================================================================
+                                                                                         *
+                                                                                         * Objective
+                                                                                         * ---------
+                                                                                         * Measure the stationary raw gyroscope bias.
+                                                                                         *
+                                                                                         * No calibration or bias correction is applied in this test.
+                                                                                         *
+                                                                                         * MPU6050 gyro range:
+                                                                                         *
+                                                                                         *     ±250 °/s
+                                                                                         *
+                                                                                         * Sensitivity:
+                                                                                         *
+                                                                                         *     131 LSB/(°/s)
+                                                                                         *
+                                                                                         * Therefore:
+                                                                                         *
+                                                                                         *     dps = raw / 131.0
+                                                                                         *
+                                                                                         *===========================================================================*/
+
+                                                                                        #if 0
+
+                                                                                            MPU6050_Gyro_t gyro;
+
+                                                                                            int64_t sumX = 0;
+                                                                                            int64_t sumY = 0;
+                                                                                            int64_t sumZ = 0;
+
+                                                                                            int32_t avgX;
+                                                                                            int32_t avgY;
+                                                                                            int32_t avgZ;
+
+                                                                                            float biasX_dps;
+                                                                                            float biasY_dps;
+                                                                                            float biasZ_dps;
+
+                                                                                            uint32_t sampleCount = 0;
+
+                                                                                            char message[128];
+
+
+                                                                                            /*---------------------------------------------------------
+                                                                                             * Initialize MPU6050
+                                                                                             *--------------------------------------------------------*/
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    "\r\nInitializing MPU6050...\r\n");
+
+                                                                                            if (MPU6050_Init(&hi2c1) != HAL_OK)
+                                                                                            {
+                                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                                        "MPU6050 Initialization Failed\r\n");
+
+                                                                                                while (1);
+                                                                                            }
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    "MPU6050 Initialization Successful\r\n");
+
+
+                                                                                            /*---------------------------------------------------------
+                                                                                             * Configure Gyroscope
+                                                                                             *
+                                                                                             * ±250 °/s
+                                                                                             *--------------------------------------------------------*/
+
+                                                                                            if (MPU6050_SetGyroRange(&hi2c1,
+                                                                                                                     MPU6050_GYRO_RANGE_250DPS) != HAL_OK)
+                                                                                            {
+                                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                                        "Gyro Range Configuration Failed\r\n");
+
+                                                                                                while (1);
+                                                                                            }
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    "Gyroscope configured for ±250 dps\r\n");
+
+
+                                                                                            /*---------------------------------------------------------
+                                                                                             * Allow sensor to settle
+                                                                                             *--------------------------------------------------------*/
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    "\r\nKEEP SENSOR COMPLETELY STILL\r\n");
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    "Waiting 5 seconds...\r\n");
+
+                                                                                            HAL_Delay(5000);
+
+
+                                                                                            /*---------------------------------------------------------
+                                                                                             * Collect samples
+                                                                                             *--------------------------------------------------------*/
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    "Collecting 1000 samples...\r\n");
+
+                                                                                            while (sampleCount < 1000U)
+                                                                                            {
+                                                                                                if (MPU6050_ReadGyroRaw(&hi2c1,
+                                                                                                                        &gyro) != HAL_OK)
+                                                                                                {
+                                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                                            "Gyro Read Failed\r\n");
+
+                                                                                                    continue;
+                                                                                                }
+
+                                                                                                sumX += gyro.x;
+                                                                                                sumY += gyro.y;
+                                                                                                sumZ += gyro.z;
+
+                                                                                                sampleCount++;
+
+                                                                                                HAL_Delay(5);
+                                                                                            }
+
+
+                                                                                            /*---------------------------------------------------------
+                                                                                             * Calculate average raw bias
+                                                                                             *--------------------------------------------------------*/
+
+                                                                                            avgX = (int32_t)(sumX / 1000LL);
+                                                                                            avgY = (int32_t)(sumY / 1000LL);
+                                                                                            avgZ = (int32_t)(sumZ / 1000LL);
+
+
+                                                                                            /*---------------------------------------------------------
+                                                                                             * Convert raw bias to °/s
+                                                                                             *
+                                                                                             * ±250 dps = 131 LSB/(°/s)
+                                                                                             *--------------------------------------------------------*/
+
+                                                                                            biasX_dps = (float)avgX / 131.0f;
+                                                                                            biasY_dps = (float)avgY / 131.0f;
+                                                                                            biasZ_dps = (float)avgZ / 131.0f;
+
+
+                                                                                            /*---------------------------------------------------------
+                                                                                             * Print results
+                                                                                             *--------------------------------------------------------*/
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    "\r\n========================================\r\n");
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    "GYROSCOPE RAW BIAS MEASUREMENT\r\n");
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    "========================================\r\n");
+
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    "\r\nRAW AVERAGE:\r\n");
+
+
+                                                                                            sprintf(message,
+                                                                                                    "Gyro X : %ld raw\r\n",
+                                                                                                    avgX);
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    message);
+
+
+                                                                                            sprintf(message,
+                                                                                                    "Gyro Y : %ld raw\r\n",
+                                                                                                    avgY);
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    message);
+
+
+                                                                                            sprintf(message,
+                                                                                                    "Gyro Z : %ld raw\r\n",
+                                                                                                    avgZ);
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    message);
+
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    "\r\nBIAS:\r\n");
+
+
+                                                                                            sprintf(message,
+                                                                                                    "Gyro X : %+0.4f dps\r\n",
+                                                                                                    biasX_dps);
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    message);
+
+
+                                                                                            sprintf(message,
+                                                                                                    "Gyro Y : %+0.4f dps\r\n",
+                                                                                                    biasY_dps);
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    message);
+
+
+                                                                                            sprintf(message,
+                                                                                                    "Gyro Z : %+0.4f dps\r\n",
+                                                                                                    biasZ_dps);
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    message);
+
+
+                                                                                            BSP_UART_TransmitString(&huart2,
+                                                                                                                    "\r\nMeasurement Complete.\r\n");
+
+
+                                                                                            while (1)
+                                                                                            {
+                                                                                                HAL_Delay(1000);
+                                                                                            }
+
+                                                                                        #endif
+
+
+                                                                                            /*==============================================================================
+                                                                                             * TEST 7.17 : Calibrated Gyroscope Stationary Verification
+                                                                                             *==============================================================================
+                                                                                             *
+                                                                                             * Objective
+                                                                                             * ---------
+                                                                                             * Verify that the provisional gyro bias correction produces approximately
+                                                                                             * 0 °/s when the MPU6050 is stationary.
+                                                                                             *
+                                                                                             * Gyro configuration:
+                                                                                             *
+                                                                                             *     ±250 °/s
+                                                                                             *     131 LSB/(°/s)
+                                                                                             *
+                                                                                             * Provisional bias:
+                                                                                             *
+                                                                                             *     X = -645.5 raw
+                                                                                             *     Y = -160.5 raw
+                                                                                             *     Z = -255.0 raw
+                                                                                             *
+                                                                                             *===========================================================================*/
+
+                                                                                            #if 1
+
+                                                                                                MPU6050_GyroCalibrated_t gyro;
+
+                                                                                                char message[128];
+
+
+                                                                                                /*---------------------------------------------------------
+                                                                                                 * Initialize MPU6050
+                                                                                                 *--------------------------------------------------------*/
+
+                                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                                        "\r\nInitializing MPU6050...\r\n");
+
+
+                                                                                                if (MPU6050_Init(&hi2c1) != HAL_OK)
+                                                                                                {
+                                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                                            "MPU6050 Initialization Failed\r\n");
+
+                                                                                                    while (1);
+                                                                                                }
+
+
+                                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                                        "MPU6050 Initialization Successful\r\n");
+
+
+                                                                                                /*---------------------------------------------------------
+                                                                                                 * Configure Gyroscope
+                                                                                                 *
+                                                                                                 * ±250 °/s
+                                                                                                 *--------------------------------------------------------*/
+
+                                                                                                if (MPU6050_SetGyroRange(&hi2c1,
+                                                                                                                         MPU6050_GYRO_RANGE_250DPS) != HAL_OK)
+                                                                                                {
+                                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                                            "Gyro Range Configuration Failed\r\n");
+
+                                                                                                    while (1);
+                                                                                                }
+
+
+                                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                                        "Gyroscope configured for ±250 dps\r\n");
+
+
+                                                                                                /*---------------------------------------------------------
+                                                                                                 * Allow sensor to settle
+                                                                                                 *--------------------------------------------------------*/
+
+                                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                                        "\r\nKEEP SENSOR COMPLETELY STILL\r\n");
+
+                                                                                                BSP_UART_TransmitString(&huart2,
+                                                                                                                        "Waiting 5 seconds...\r\n");
+
+                                                                                                HAL_Delay(5000);
+
+
+                                                                                                /*---------------------------------------------------------
+                                                                                                 * Continuous calibrated gyro read
+                                                                                                 *--------------------------------------------------------*/
+
+                                                                                                while (1)
+                                                                                                {
+                                                                                                    if (MPU6050_ReadGyroCalibrated(&hi2c1,
+                                                                                                                                   &gyro) != HAL_OK)
+                                                                                                    {
+                                                                                                        BSP_UART_TransmitString(&huart2,
+                                                                                                                                "Calibrated Gyro Read Failed\r\n");
+
+                                                                                                        HAL_Delay(500);
+
+                                                                                                        continue;
+                                                                                                    }
+
+
+                                                                                                    sprintf(message,
+                                                                                                            "\r\nCorrected Gyro X : %+0.3f dps\r\n",
+                                                                                                            gyro.x);
+
+                                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                                            message);
+
+
+                                                                                                    sprintf(message,
+                                                                                                            "Corrected Gyro Y : %+0.3f dps\r\n",
+                                                                                                            gyro.y);
+
+                                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                                            message);
+
+
+                                                                                                    sprintf(message,
+                                                                                                            "Corrected Gyro Z : %+0.3f dps\r\n",
+                                                                                                            gyro.z);
+
+                                                                                                    BSP_UART_TransmitString(&huart2,
+                                                                                                                            message);
+
+
+                                                                                                    HAL_Delay(500);
+                                                                                                }
+
+                                                                                            #endif
+
+
+
+
 
 
 

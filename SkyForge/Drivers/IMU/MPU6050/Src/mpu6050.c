@@ -288,8 +288,32 @@ HAL_StatusTypeDef MPU6050_ReadAccelCalibrated(
     return HAL_OK;
 }
 
+//
+//HAL_StatusTypeDef MPU6050_ReadGyro(I2C_HandleTypeDef *hi2c,
+//                                   MPU6050_Gyro_t *gyro)
+//{
+//    uint8_t buffer[6];
+//
+//    if (HAL_I2C_Mem_Read(hi2c,
+//                         MPU6050_I2C_ADDR_LOW,
+//                         MPU6050_REG_GYRO_XOUT_H,
+//                         I2C_MEMADD_SIZE_8BIT,
+//                         buffer,
+//                         6,
+//                         HAL_MAX_DELAY) != HAL_OK)
+//    {
+//        return HAL_ERROR;
+//    }
+//
+//    gyro->x = (int16_t)((buffer[0] << 8) | buffer[1]);
+//    gyro->y = (int16_t)((buffer[2] << 8) | buffer[3]);
+//    gyro->z = (int16_t)((buffer[4] << 8) | buffer[5]);
+//
+//    return HAL_OK;
+//}
 
-HAL_StatusTypeDef MPU6050_ReadGyro(I2C_HandleTypeDef *hi2c,
+
+HAL_StatusTypeDef MPU6050_ReadGyroRaw(I2C_HandleTypeDef *hi2c,
                                    MPU6050_Gyro_t *gyro)
 {
     uint8_t buffer[6];
@@ -312,6 +336,90 @@ HAL_StatusTypeDef MPU6050_ReadGyro(I2C_HandleTypeDef *hi2c,
     return HAL_OK;
 }
 
+/*=========================================================
+ * Read Gyroscope
+ *
+ * Compatibility wrapper.
+ * Returns raw gyroscope data.
+ *=========================================================*/
+
+HAL_StatusTypeDef MPU6050_ReadGyro(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_Gyro_t *gyro)
+{
+    return MPU6050_ReadGyroRaw(hi2c, gyro);
+}
+
+
+/*=========================================================
+ * Read Calibrated Gyroscope
+ *
+ * Output:
+ *     X, Y, Z in degrees per second (°/s)
+ *
+ * Gyroscope range:
+ *     ±250 °/s
+ *
+ * Sensitivity:
+ *     131 LSB/(°/s)
+ *
+ * Provisional stationary bias:
+ *
+ *     X = -645.5 raw
+ *     Y = -160.5 raw
+ *     Z = -255.0 raw
+ *
+ * Therefore:
+ *
+ *     Corrected X = Raw X + 645.5
+ *     Corrected Y = Raw Y + 160.5
+ *     Corrected Z = Raw Z + 255.0
+ *
+ * NOTE:
+ * These are provisional bias values obtained from
+ * multiple stationary measurements.
+ *=========================================================*/
+
+HAL_StatusTypeDef MPU6050_ReadGyroCalibrated(
+    I2C_HandleTypeDef *hi2c,
+    MPU6050_GyroCalibrated_t *gyro)
+{
+    MPU6050_Gyro_t raw;
+
+    if (MPU6050_ReadGyroRaw(hi2c, &raw) != HAL_OK)
+    {
+        return HAL_ERROR;
+    }
+
+    /*-----------------------------------------------------
+     * Apply gyro bias correction
+     *----------------------------------------------------*/
+
+    float correctedX =
+        (float)raw.x + 645.5f;
+
+    float correctedY =
+        (float)raw.y + 160.5f;
+
+    float correctedZ =
+        (float)raw.z + 255.0f;
+
+
+    /*-----------------------------------------------------
+     * Convert corrected raw values to °/s
+     *
+     * ±250 dps = 131 LSB/(°/s)
+     *----------------------------------------------------*/
+
+    gyro->x = correctedX / 131.0f;
+
+    gyro->y = correctedY / 131.0f;
+
+    gyro->z = correctedZ / 131.0f;
+
+
+    return HAL_OK;
+}
 
 
 HAL_StatusTypeDef MPU6050_SetGyroRange(I2C_HandleTypeDef *hi2c,
